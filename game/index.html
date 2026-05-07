@@ -1,0 +1,1908 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>江湖残卷 - 卡牌版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        :root {
+            --bg: #1A1A1A; --paper: #2D2D2D; --gold: #D4AF37;
+            --red: #C41E3A; --green: #3D5A3D; --blue: #3498DB;
+            --purple: #9B59B6; --orange: #E67E22; --cyan: #1ABC9C;
+        }
+        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: #E8E8E8; min-height: 100vh; display: flex; justify-content: center; }
+        .screen { display: none; width: 100%; max-width: 420px; min-height: 100vh; flex-direction: column; }
+        .screen.active { display: flex; }
+
+        /* 主界面 */
+        .header { text-align: center; padding: 30px 20px; background: linear-gradient(180deg, #252525, transparent); }
+        .title { font-size: 22px; color: var(--gold); letter-spacing: 2px; }
+        .sub { font-size: 11px; color: #666; margin-top: 4px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; padding: 12px 16px; }
+        .stat-box { text-align: center; padding: 10px 6px; background: var(--paper); border-radius: 8px; }
+        .stat-val { font-size: 18px; color: var(--gold); }
+        .stat-label { font-size: 9px; color: #666; }
+        .action-col { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+        .btn { padding: 16px; border-radius: 12px; font-size: 14px; font-weight: bold; border: none; cursor: pointer; }
+        .btn-primary { background: linear-gradient(135deg, var(--green), #2D4A2D); color: white; }
+        .btn-ghost { background: #333; color: #666; font-size: 11px; }
+
+        /* 职业选择 */
+        .class-select { padding: 16px; flex: 1; overflow-y: auto; }
+        .class-title { font-size: 13px; color: var(--gold); text-align: center; margin-bottom: 14px; }
+        .class-list { display: flex; flex-direction: column; gap: 10px; }
+        .class-card {
+            display: flex; gap: 14px; padding: 14px; background: var(--paper);
+            border: 2px solid #3A3A3A; border-radius: 12px; cursor: pointer; transition: all 0.2s;
+        }
+        .class-card:hover { border-color: var(--green); transform: translateX(4px); }
+        .class-card.sel { border-color: var(--gold); background: rgba(212,175,55,0.08); }
+        .class-card.sel::before { content: '✓ '; color: var(--gold); font-weight: bold; }
+        .class-icon { font-size: 40px; line-height: 1; }
+        .class-name { font-size: 16px; color: var(--gold); }
+        .class-desc { font-size: 10px; color: #888; margin: 2px 0; }
+        .class-stats { display: flex; gap: 8px; font-size: 10px; color: #666; }
+        .stat-item { display: flex; align-items: center; gap: 2px; }
+        .flow-tags { display: flex; gap: 4px; margin-top: 4px; }
+        .flow-tag { font-size: 9px; padding: 2px 6px; border-radius: 8px; background: rgba(255,255,255,0.08); }
+        .flow-tag.dps { color: var(--red); border: 1px solid var(--red); }
+        .flow-tag.tank { color: var(--blue); border: 1px solid var(--blue); }
+        .flow-tag.dot { color: var(--purple); border: 1px solid var(--purple); }
+        .start-btn { margin: 16px; padding: 16px; background: var(--gold); color: #1A1A1A; border: none; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .back-btn { margin: 0 16px 16px; padding: 10px; background: #333; color: #666; border: none; border-radius: 8px; cursor: pointer; }
+
+        /* 战斗界面 */
+        .battle-top { padding: 10px 14px; background: var(--paper); display: flex; justify-content: space-between; align-items: center; }
+        .res-item { display: flex; align-items: center; gap: 4px; font-size: 13px; }
+        .res-val { color: var(--gold); font-weight: bold; }
+        .wave-tag { font-size: 11px; color: #888; }
+
+        .battle-main { flex: 1; padding: 12px 14px; display: flex; flex-direction: column; }
+
+        /* 敌人区域 */
+        .enemy-area { }
+        .area-label { font-size: 10px; color: #555; margin-bottom: 6px; }
+        .enemy-list { display: flex; flex-direction: column; gap: 6px; }
+        .enemy-card {
+            display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+            background: rgba(196,30,58,0.08); border: 1px solid rgba(196,30,58,0.3);
+            border-radius: 10px; cursor: pointer; transition: all 0.15s; position: relative;
+        }
+        .enemy-card:hover { background: rgba(196,30,58,0.15); }
+        .enemy-card.targeted { border-color: var(--red); background: rgba(196,30,58,0.2); box-shadow: 0 0 10px rgba(196,30,58,0.3); }
+        .enemy-card.dead { opacity: 0.3; cursor: default; }
+        .enemy-icon { font-size: 24px; }
+        .enemy-info { flex: 1; }
+        .enemy-name { font-size: 12px; color: #CCC; }
+        .enemy-status { font-size: 9px; color: #888; margin-top: 2px; }
+        .hp-bar-bg { height: 5px; background: #333; border-radius: 3px; margin-top: 4px; }
+        .hp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--red), #FF6B6B); transition: width 0.3s; }
+        .poison-bar-fill { height: 100%; background: linear-gradient(90deg, var(--purple), #DDA0DD); transition: width 0.3s; }
+        .enemy-debuff { position: absolute; top: 3px; right: 6px; font-size: 9px; color: var(--purple); }
+
+        .vs-divider { text-align: center; font-size: 14px; color: #444; padding: 8px 0; }
+
+        /* 玩家区域 */
+        .player-area { }
+        .player-card {
+            display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+            background: rgba(61,90,61,0.1); border: 1px solid rgba(61,90,61,0.3);
+            border-radius: 10px; position: relative;
+        }
+        .player-icon { font-size: 28px; }
+        .player-info { flex: 1; }
+        .player-name { font-size: 13px; color: var(--gold); }
+        .player-status { font-size: 10px; color: #888; display: flex; gap: 8px; margin-top: 2px; }
+        .buff-tag { font-size: 9px; padding: 1px 4px; border-radius: 4px; }
+        .buff-tag.buff { background: rgba(52,152,219,0.3); color: var(--blue); }
+        .buff-tag.debuff { background: rgba(196,30,58,0.3); color: var(--red); }
+        .buff-tag.special { background: rgba(155,89,182,0.3); color: var(--purple); }
+
+        /* 手牌区 */
+        .hand-area { padding: 10px 14px; background: #222; border-top: 1px solid #333; }
+        .hand-label { font-size: 10px; color: #666; margin-bottom: 6px; display: flex; justify-content: space-between; }
+        .hand-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+        .card-item {
+            min-width: 90px; max-width: 90px; padding: 8px 6px;
+            background: var(--paper); border: 1px solid #444; border-radius: 10px;
+            text-align: center; cursor: pointer; transition: all 0.15s; position: relative;
+        }
+        .card-item:hover { transform: translateY(-6px); border-color: var(--gold); box-shadow: 0 6px 16px rgba(0,0,0,0.5); }
+        .card-item:active { transform: scale(0.95); }
+        .card-item.selected { border-color: var(--gold); background: rgba(212,175,55,0.15); }
+        .card-item.disabled { opacity: 0.4; cursor: not-allowed; }
+        .card-item.cant-play { border-color: #555; opacity: 0.5; }
+        .card-icon { font-size: 26px; }
+        .card-name { font-size: 11px; color: #DDD; margin-top: 2px; font-weight: bold; }
+        .card-desc { font-size: 9px; color: #888; margin-top: 3px; line-height: 1.3; min-height: 26px; }
+        .card-cost { position: absolute; top: 2px; right: 5px; font-size: 11px; color: var(--cyan); font-weight: bold; }
+        .card-type-tag { font-size: 9px; color: #666; margin-top: 2px; }
+        .card-item.attack .card-type-tag { color: var(--red); }
+        .card-item.defense .card-type-tag { color: var(--blue); }
+        .card-item.special .card-type-tag { color: var(--purple); }
+        .card-item.mobility .card-type-tag { color: var(--green); }
+        .card-kw { display: flex; gap: 2px; justify-content: center; margin-top: 2px; }
+        .kw-tag { font-size: 8px; padding: 1px 3px; border-radius: 3px; color: #fff; }
+        .kw-tag.exhaust { background: #c0392b; }
+        .kw-tag.retain { background: #2980b9; }
+        .kw-tag.innate { background: #27ae60; }
+        .card-cost.free { color: #27ae60; font-weight: bold; }
+        .card-rarity-dot { position: absolute; top: 3px; left: 5px; font-size: 8px; }
+        .card-rarity-dot.rare { color: var(--blue); }
+        .card-rarity-dot.epic { color: var(--purple); }
+        .card-rarity-dot.legend { color: var(--gold); }
+
+        /* 行动按钮 */
+        .action-row { padding: 10px 14px 16px; display: flex; gap: 8px; background: #1A1A1A; }
+        .action-btn { flex: 1; padding: 14px; border-radius: 10px; font-size: 13px; font-weight: bold; border: none; cursor: pointer; transition: all 0.15s; }
+        .action-btn:active { transform: scale(0.96); }
+        .btn-play { background: var(--red); color: white; }
+        .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
+        .btn-end { background: #444; color: #CCC; }
+        .btn-end:disabled { opacity: 0.35; }
+        .btn-heal { background: var(--green); color: white; position: relative; }
+        .heal-count { position: absolute; top: 2px; right: 4px; background: var(--gold); color: #1A1A1A; font-size: 9px; padding: 1px 4px; border-radius: 6px; }
+
+        /* 反馈 */
+        .feedback { padding: 6px 14px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
+        .fb-text { font-size: 12px; padding: 5px 12px; border-radius: 14px; animation: fbPop 0.25s; }
+        @keyframes fbPop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .fb-text.success { background: rgba(61,90,61,0.5); color: #6BFF6B; border: 1px solid var(--green); }
+        .fb-text.fail { background: rgba(196,30,58,0.5); color: #FF6B6B; border: 1px solid var(--red); }
+        .fb-text.info { background: rgba(212,175,55,0.3); color: var(--gold); border: 1px solid var(--gold); }
+        .fb-text.special { background: rgba(155,89,182,0.5); color: #DDA0DD; border: 1px solid var(--purple); }
+
+        /* 飘字 */
+        .dmg-pop { position: fixed; font-size: 24px; font-weight: bold; pointer-events: none; animation: floatUp 0.8s forwards; z-index: 500; }
+        .dmg-pop.dmg { color: #FF4444; }
+        .dmg-pop.crit { color: #FFD700; font-size: 30px; }
+        .dmg-pop.heal { color: #44FF44; }
+        .dmg-pop.miss { color: #888; font-size: 16px; }
+        .dmg-pop.poison { color: #DDA0DD; font-size: 18px; }
+        .dmg-pop.reflect { color: var(--orange); font-size: 18px; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1.2); } 100% { opacity: 0; transform: translateY(-60px) scale(0.7); } }
+
+        /* 弹窗 */
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: var(--paper); border: 2px solid var(--gold); border-radius: 16px; padding: 24px; max-width: 380px; width: 94%; }
+        .modal-icon { text-align: center; font-size: 56px; margin-bottom: 12px; }
+        .modal-title { text-align: center; font-size: 20px; color: var(--gold); margin-bottom: 8px; }
+        .modal-desc { text-align: center; font-size: 13px; color: #AAA; line-height: 1.6; margin-bottom: 20px; }
+        .modal-choices { display: flex; flex-direction: column; gap: 8px; }
+        .choice-btn { padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid #444; background: rgba(255,255,255,0.04); transition: all 0.15s; text-align: left; }
+        .choice-btn:hover { border-color: var(--gold); transform: translateX(4px); }
+        .choice-name { color: #EEE; font-size: 13px; font-weight: bold; }
+        .choice-desc { color: #888; font-size: 11px; margin-top: 3px; }
+        .choice-cost { color: var(--gold); font-size: 10px; margin-top: 3px; }
+
+        /* 波次提示 */
+        .wave-banner { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 36px; color: var(--gold); font-weight: bold; text-shadow: 0 0 30px var(--gold); z-index: 600; animation: waveFlash 1.5s forwards; pointer-events: none; }
+        @keyframes waveFlash { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.3)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}80%{opacity:1}100%{opacity:0} }
+
+        /* 章节结束选卡 */
+        .card-pick { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 1000; display: flex; flex-direction: column; }
+        .pick-header { padding: 20px; text-align: center; }
+        .pick-title { font-size: 18px; color: var(--gold); }
+        .pick-sub { font-size: 12px; color: #666; margin-top: 4px; }
+        .pick-cards { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+        .pick-card {
+            display: flex; gap: 14px; padding: 16px; background: var(--paper);
+            border: 2px solid #444; border-radius: 12px; cursor: pointer; transition: all 0.2s;
+        }
+        .pick-card:hover { border-color: var(--gold); transform: translateY(-3px); }
+        .pick-card-icon { font-size: 40px; }
+        .pick-card-info { flex: 1; }
+        .pick-card-name { font-size: 15px; color: var(--gold); }
+        .pick-card-type { font-size: 10px; color: #666; margin: 2px 0; }
+        .pick-card-effect { font-size: 12px; color: #CCC; line-height: 1.4; }
+        .pick-card-rarity { font-size: 10px; padding: 2px 6px; border-radius: 6px; }
+        .pick-card-rarity.rare { background: rgba(52,152,219,0.3); color: var(--blue); }
+        .pick-card-rarity.epic { background: rgba(155,89,182,0.3); color: var(--purple); }
+        .pick-card-rarity.legend { background: rgba(212,175,55,0.3); color: var(--gold); }
+    </style>
+</head>
+<body>
+    <!-- 主界面 -->
+    <div class="screen active" id="screenMain">
+        <div class="header">
+            <div class="title">江湖残卷</div>
+            <div class="sub">卡牌Roguelike · 流派构筑</div>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-box"><div class="stat-val" id="stRuns">0</div><div class="stat-label">总局数</div></div>
+            <div class="stat-box"><div class="stat-val" id="stWins">0</div><div class="stat-label">通关</div></div>
+            <div class="stat-box"><div class="stat-val" id="stBest">0</div><div class="stat-label">最佳章节</div></div>
+            <div class="stat-box"><div class="stat-val" id="stCards">0</div><div class="stat-label">已解锁卡</div></div>
+        </div>
+        <div class="action-col" style="flex:1;">
+            <button class="btn btn-primary" onclick="showScreen('screenClass')">🗡️ 开始探索</button>
+            <button class="btn btn-ghost" onclick="resetAll()">🔄 重置进度</button>
+        </div>
+    </div>
+
+    <!-- 职业选择 -->
+    <div class="screen" id="screenClass">
+        <div class="class-select">
+            <div class="class-title">🎯 选择你的职业</div>
+            <div class="class-list" id="classList"></div>
+        </div>
+        <button class="start-btn" onclick="confirmClass()">确认 · 开始冒险</button>
+        <button class="back-btn" onclick="showScreen('screenMain')">← 返回</button>
+    </div>
+
+    <!-- 战斗界面 -->
+    <div class="screen" id="screenBattle">
+        <div class="battle-top">
+            <div class="res-item"><span>💰</span><span class="res-val" id="rGold">0</span></div>
+            <div class="wave-tag">章节 <span id="rChapter">1</span> - 战斗 1</div>
+            <div class="res-item"><span>⚡</span><span class="res-val" id="rEnergy">3</span>/<span id="rMaxEnergy">6</span></div>
+            <div class="res-item" id="comboDisplay" style="display:none"><span>🔥连击</span><span class="res-val" id="rCombo">0</span></div>
+        </div>
+        <div class="battle-main">
+            <div class="enemy-area">
+                <div class="area-label">敌方</div>
+                <div class="enemy-list" id="enemyList"></div>
+            </div>
+            <div class="vs-divider">⚔ 战 ⚔</div>
+            <div class="player-area">
+                <div class="area-label">我方</div>
+                <div class="player-card" id="playerCard"></div>
+            </div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="hand-area">
+            <div class="hand-label">
+                <span>🃏 手牌 <span id="handCount">0</span>/10</span>
+                <span id="turnInfo">回合 1</span>
+            </div>
+            <div class="hand-scroll" id="handList"></div>
+        </div>
+        <div class="action-row">
+            <button class="action-btn btn-play" id="btnPlay" onclick="playCard()">⚔️ 出牌</button>
+            <button class="action-btn btn-heal" id="btnHeal" onclick="useHeal()" style="flex:0.6;">
+                💊<span class="heal-count" id="healCount">0</span>
+            </button>
+            <button class="action-btn btn-end" id="btnEnd" onclick="endTurn()">结束回合</button>
+        </div>
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="modal" id="modal" style="display:none">
+        <div class="modal-content">
+            <div class="modal-icon" id="mIcon">🏺</div>
+            <div class="modal-title" id="mTitle">事件</div>
+            <div class="modal-desc" id="mDesc">描述</div>
+            <div class="modal-choices" id="mChoices"></div>
+        </div>
+    </div>
+
+    <!-- 选卡弹窗 -->
+    <div class="card-pick" id="cardPick" style="display:none">
+        <div class="pick-header">
+            <div class="pick-title">📜 选择一张卡牌</div>
+            <div class="pick-sub">新卡牌将永久解锁</div>
+        </div>
+        <div class="pick-cards" id="pickCards"></div>
+    </div>
+
+    <script>
+    // ==================== 卡牌数据 ====================
+    const ALL_CARDS = {
+        // ===== 剑侠基础 =====
+        sword_basic_1: { id: 'sword_basic_1', name: '上挑', icon: '↗️', type: 'attack', cost: 1, rarity: 'basic', desc: '8伤害；[连招]：抽1张牌', effect: 'sword_shangtiao', value: 8, class: 'sword' },
+        sword_basic_2: { id: 'sword_basic_2', name: '重击', icon: '🔪', type: 'attack', cost: 2, rarity: 'basic', desc: '造成18点伤害', effect: 'damage', value: 18, class: 'sword' },
+        sword_basic_3: { id: 'sword_basic_3', name: '连斩', icon: '💫', type: 'attack', cost: 2, rarity: 'basic', desc: '6伤害×3次', effect: 'damage_multi', value: 6, hits: 3, class: 'sword' },
+        sword_basic_4: { id: 'sword_basic_4', name: '破甲', icon: '⛰️', type: 'attack', cost: 2, rarity: 'basic', desc: '15伤害，忽视25%防御', effect: 'damage_armor_ignore', value: 15, ignorePct: 0.25, class: 'sword' },
+        sword_basic_5: { id: 'sword_basic_5', name: '蓄力', icon: '🔥', type: 'special', cost: 1, rarity: 'basic', desc: '下一次攻击伤害+100%【保留】', effect: 'buff_next_attack', value: 1.0, retain: true, class: 'sword' },
+
+        // ===== 剑侠解锁 =====
+        sword_unlock_1: { id: 'sword_unlock_1', name: '连环剑', icon: '🌀', type: 'attack', cost: 1, rarity: 'rare', desc: '8伤害；[连招]：回1点能量', effect: 'sword_lianhuan', value: 8, class: 'sword' },
+        sword_unlock_2: { id: 'sword_unlock_2', name: '剑意', icon: '✨', type: 'special', cost: 1, rarity: 'rare', desc: '每次攻击伤害+3（本场战斗叠加）', effect: 'buff_stack_atk', value: 3, class: 'sword' },
+        sword_unlock_3: { id: 'sword_unlock_3', name: '暴击姿态', icon: '🎯', type: 'special', cost: 1, rarity: 'rare', desc: '本回合暴击率+60%', effect: 'buff_crit', value: 0.6, class: 'sword' },
+        sword_unlock_4: { id: 'sword_unlock_4', name: '剑芒', icon: '⚡', type: 'special', cost: 2, rarity: 'rare', desc: '伤害+40%，暴伤+50%', effect: 'buff_crit_damage', value: 0.4, critBonus: 0.5, class: 'sword' },
+        sword_unlock_5: { id: 'sword_unlock_5', name: '万剑归宗', icon: '�️', type: 'attack', cost: 4, rarity: 'epic', desc: '全场攻击6次，每次伤害递增', effect: 'damage_escalate', hits: 6, baseValue: 5, escalate: 3, class: 'sword' },
+        sword_unlock_6: { id: 'sword_unlock_6', name: '一剑倾城', icon: '🌆', type: 'attack', cost: 3, rarity: 'epic', desc: '35伤害，若触发暴击则回复至满能', effect: 'damage_crit_energy', value: 35, critPct: 0.4, class: 'sword' },
+        sword_unlock_7: { id: 'sword_unlock_7', name: '独孤九剑', icon: '🌟', type: 'attack', cost: 4, rarity: 'legend', desc: '30伤害；忽视所有防御与闪避', effect: 'damage_true', value: 30, class: 'sword' },
+        sword_unlock_8: { id: 'sword_unlock_8', name: '天外飞仙', icon: '🌠', type: 'attack', cost: 5, rarity: 'legend', desc: '造成目标当前生命50%的真实伤害【消耗】', effect: 'damage_percent_true', value: 0.5, exhaust: true, class: 'sword' },
+
+        // ===== 刺客基础 =====
+        assassin_basic_1: { id: 'assassin_basic_1', name: '暗刺', icon: '🗡️', type: 'attack', cost: 1, rarity: 'basic', desc: '12伤害；[潜行]下伤害×3', effect: 'assassin_anchi', value: 12, stealthMult: 3, class: 'assassin' },
+        assassin_basic_2: { id: 'assassin_basic_2', name: '潜行', icon: '🌑', type: 'special', cost: 0, rarity: 'basic', desc: '获得一层【潜行】，本回合不能被选中【固有】', effect: 'stealth', value: 1, innate: true, class: 'assassin' },
+        assassin_basic_3: { id: 'assassin_basic_3', name: '毒刃', icon: '🩸', type: 'attack', cost: 1, rarity: 'basic', desc: '8伤害 + 中毒3层', effect: 'damage_poison', value: 8, poisonStacks: 3, class: 'assassin' },
+        assassin_basic_4: { id: 'assassin_basic_4', name: '瞬闪', icon: '💨', type: 'mobility', cost: 1, rarity: 'basic', desc: '获得2次绝对闪避；闪避成功获得1层潜行', effect: 'absolute_evade', value: 2, grantStealth: true, class: 'assassin' },
+        assassin_basic_5: { id: 'assassin_basic_5', name: '淬毒', icon: '☠️', type: 'special', cost: 1, rarity: 'basic', desc: '使敌人的【中毒】层数翻倍', effect: 'poison_double', class: 'assassin' },
+        assassin_basic_3: { id: 'assassin_basic_3', name: '毒刃', icon: '🩸', type: 'attack', cost: 1, rarity: 'basic', desc: '8伤害 + 中毒3层', effect: 'damage_poison', value: 8, poisonStacks: 3, class: 'assassin' },
+        assassin_basic_4: { id: 'assassin_basic_4', name: '瞬闪', icon: '�', type: 'mobility', cost: 1, rarity: 'basic', desc: '获得2次绝对闪避', effect: 'absolute_evade', value: 2, class: 'assassin' },
+        assassin_basic_5: { id: 'assassin_basic_5', name: '淬毒', icon: '☠️', type: 'special', cost: 1, rarity: 'basic', desc: '使敌人的【中毒】层数翻倍', effect: 'poison_double', class: 'assassin' },
+
+        // ===== 刺客解锁 =====
+        assassin_unlock_1: { id: 'assassin_unlock_1', name: '致命', icon: '�', type: 'attack', cost: 2, rarity: 'rare', desc: '20伤害；若敌人满血则暴击', effect: 'damage_crit_if_full', value: 20, class: 'assassin' },
+        assassin_unlock_2: { id: 'assassin_unlock_2', name: '暗杀', icon: '🎭', type: 'attack', cost: 2, rarity: 'rare', desc: '20伤害；若目标生命低于30%直接斩杀', effect: 'damage_execute', value: 20, executePct: 0.3, class: 'assassin' },
+        assassin_unlock_3: { id: 'assassin_unlock_3', name: '剧毒之牙', icon: '🦷', type: 'attack', cost: 2, rarity: 'rare', desc: '10伤害；敌方每层中毒额外造成3伤害', effect: 'damage_poison_scale', value: 10, perStack: 3, class: 'assassin' },
+        assassin_unlock_4: { id: 'assassin_unlock_4', name: '血刃', icon: '🗡️', type: 'attack', cost: 1, rarity: 'rare', desc: '击杀目标后，永久+2攻击力', effect: 'damage_kill_bonus', value: 12, atkBonus: 2, class: 'assassin' },
+        assassin_unlock_5: { id: 'assassin_unlock_5', name: '毒爆', icon: '💣', type: 'attack', cost: 3, rarity: 'epic', desc: '移除中毒，每层中毒造成10点爆发伤害', effect: 'poison_explode', perStack: 10, class: 'assassin' },
+        assassin_unlock_6: { id: 'assassin_unlock_6', name: '幻影杀', icon: '👤', type: 'attack', cost: 3, rarity: 'epic', desc: '随机攻击5次，每次攻击有50%几率潜行', effect: 'phantom_strike', hits: 5, value: 8, stealthPct: 0.5, class: 'assassin' },
+        assassin_unlock_7: { id: 'assassin_unlock_7', name: '瘟疫之源', icon: '☣️', type: 'special', cost: 4, rarity: 'legend', desc: '每回合开始时，全场敌人中毒层数+5', effect: 'plague_aura', value: 5, class: 'assassin' },
+        assassin_unlock_8: { id: 'assassin_unlock_8', name: '死神标记', icon: '💀', type: 'special', cost: 2, rarity: 'legend', desc: '标记敌人：受到的所有伤害提升100%', effect: 'mark_death', value: 1.0, class: 'assassin' },
+
+        // ===== 武僧基础 =====
+        monk_basic_1: { id: 'monk_basic_1', name: '铁山靠', icon: '🛡️', type: 'defense', cost: 1, rarity: 'basic', desc: '10格挡；下回合攻击+5', effect: 'block_atk', blockValue: 10, atkBonus: 5, class: 'monk' },
+        monk_basic_2: { id: 'monk_basic_2', name: '金刚拳', icon: '👊', type: 'attack', cost: 2, rarity: 'basic', desc: '16伤害；获得5点反伤值', effect: 'damage_thorns', value: 16, thorns: 5, class: 'monk' },
+        monk_basic_3: { id: 'monk_basic_3', name: '反伤震', icon: '⚡', type: 'special', cost: 1, rarity: 'basic', desc: '获得【反震】：受击时返还100%伤害', effect: 'counter_reflect', value: 1.0, class: 'monk' },
+        monk_basic_4: { id: 'monk_basic_4', name: '醉拳闪', icon: '�', type: 'mobility', cost: 1, rarity: 'basic', desc: '50%闪避；成功后抽2张牌', effect: 'evade_draw', evadePct: 0.5, drawCount: 2, class: 'monk' },
+        monk_basic_5: { id: 'monk_basic_5', name: '无相转', icon: '�', type: 'defense', cost: 2, rarity: 'basic', desc: '抵消下次伤害并转移给敌人【保留】', effect: 'absorb_redirect', retain: true, class: 'monk' },
+
+        // ===== 武僧解锁 =====
+        monk_unlock_1: { id: 'monk_unlock_1', name: '震天掌', icon: '💥', type: 'attack', cost: 2, rarity: 'rare', desc: '18伤害；若本回合闪避过攻击，伤害翻倍+回1能量', effect: 'damage_if_dodged', value: 18, class: 'monk' },
+        monk_unlock_2: { id: 'monk_unlock_2', name: '铁布衫', icon: '🥋', type: 'defense', cost: 2, rarity: 'rare', desc: '获得25护甲；护甲本回合不消失', effect: 'armor_persist', value: 25, class: 'monk' },
+        monk_unlock_3: { id: 'monk_unlock_3', name: '凌波微步', icon: '🌊', type: 'mobility', cost: 1, rarity: 'rare', desc: '3回合内，每回合开始获得1次闪避', effect: 'evade_over_time', turns: 3, value: 1, class: 'monk' },
+        monk_unlock_4: { id: 'monk_unlock_4', name: '雾身', icon: '🌫️', type: 'special', cost: 0, rarity: 'rare', desc: '丢弃所有手牌，下回合能量恢复+2', effect: 'discard_all_energy', energyBonus: 2, class: 'monk' },
+        monk_unlock_5: { id: 'monk_unlock_5', name: '金刚不坏', icon: '�', type: 'defense', cost: 3, rarity: 'epic', desc: '本回合无敌；下回合能量归零', effect: 'invincible_penalty', class: 'monk' },
+        monk_unlock_6: { id: 'monk_unlock_6', name: '幻影迷踪', icon: '👻', type: 'defense', cost: 3, rarity: 'epic', desc: '受到攻击时自动反击15伤害，持续2回合', effect: 'auto_counter', value: 15, turns: 2, class: 'monk' },
+        monk_unlock_7: { id: 'monk_unlock_7', name: '天地同寿', icon: '🌋', type: 'attack', cost: 4, rarity: 'legend', desc: '消耗所有能量，每点能量造成20点反弹伤害', effect: 'energy_burst', perEnergy: 20, class: 'monk' },
+        monk_unlock_8: { id: 'monk_unlock_8', name: '逍遥游', icon: '🌬️', type: 'mobility', cost: 3, rarity: 'legend', desc: '获得3层【预知】：必然避开下3次攻击', effect: 'foresight', value: 3, class: 'monk' },
+
+        // ===== 萨满基础 =====
+        shaman_basic_1: { id: 'shaman_basic_1', name: '化血掌', icon: '👋', type: 'attack', cost: 1, rarity: 'basic', desc: '12伤害；回复5点生命', effect: 'damage_heal', value: 12, heal: 5, class: 'shaman' },
+        shaman_basic_2: { id: 'shaman_basic_2', name: '噬魂击', icon: '💜', type: 'attack', cost: 2, rarity: 'basic', desc: '消耗10%生命，造成25伤害；若击杀回复20%生命', effect: 'damage_kill_heal', value: 25, hpCostPct: 0.10, healPct: 0.2, class: 'shaman' },
+        shaman_basic_3: { id: 'shaman_basic_3', name: '聚血咒', icon: '💚', type: 'special', cost: 2, rarity: 'basic', desc: '回复20点生命', effect: 'heal', value: 20, class: 'shaman' },
+        shaman_basic_4: { id: 'shaman_basic_4', name: '白骨甲', icon: '�', type: 'defense', cost: 2, rarity: 'basic', desc: '获得30点护盾', effect: 'shield', value: 30, hpCostPct: 0.05, class: 'shaman' },
+        shaman_basic_5: { id: 'shaman_basic_5', name: '血祭', icon: '🩸', type: 'special', cost: 0, rarity: 'basic', desc: '消耗8点生命，获得2点能量并抽1张牌', effect: 'blood_sacrifice_engine', hpCost: 8, energyGain: 2, class: 'shaman' },
+
+        // ===== 萨满解锁 =====
+        shaman_unlock_1: { id: 'shaman_unlock_1', name: '燃血', icon: '🔥', type: 'special', cost: 0, rarity: 'rare', desc: '消耗10血，本回合攻击力+15', effect: 'sacrifice_buff_atk', hpCost: 10, value: 15, class: 'shaman' },
+        shaman_unlock_2: { id: 'shaman_unlock_2', name: '血爆', icon: '💥', type: 'attack', cost: 3, rarity: 'rare', desc: '造成已损失生命值200%的全场伤害【消耗】', effect: 'sacrifice_lost_hp_aoe', hpCostPct: 0.30, mult: 2.0, exhaust: true, class: 'shaman' },
+        shaman_unlock_3: { id: 'shaman_unlock_3', name: '骨刺', icon: '🌹', type: 'defense', cost: 2, rarity: 'rare', desc: '20护盾；敌人攻击护盾受20点反伤', effect: 'thorns_shield', shield: 20, thorns: 20, class: 'shaman' },
+        shaman_unlock_4: { id: 'shaman_unlock_4', name: '煞斩', icon: '⚔️', type: 'attack', cost: 2, rarity: 'rare', desc: '18伤害；自身每有10%残血伤害+5', effect: 'damage_lowhp_scale', value: 18, perTenPct: 5, class: 'shaman' },
+        shaman_unlock_5: { id: 'shaman_unlock_5', name: '血噬', icon: '🩸', type: 'attack', cost: 2, rarity: 'epic', desc: '全场40伤害；并施加【重伤】', effect: 'sacrifice_aoe_wound', value: 40, hpCostPct: 0.20, class: 'shaman' },
+        shaman_unlock_6: { id: 'shaman_unlock_6', name: '爆甲', icon: '🛡️', type: 'defense', cost: 3, rarity: 'epic', desc: '获得50护盾；盾碎时对全场造成等量伤害', effect: 'shield_explode', shield: 50, class: 'shaman' },
+        shaman_unlock_7: { id: 'shaman_unlock_7', name: '嗜血咒', icon: '🧛', type: 'special', cost: 4, rarity: 'legend', desc: '5回合内，所有伤害的50%转化为治疗', effect: 'blood_demon_lifesteal', turns: 5, lifesteal: 0.5, class: 'shaman' },
+        shaman_unlock_8: { id: 'shaman_unlock_8', name: '不死蛊', icon: '🌟', type: 'defense', cost: 5, rarity: 'legend', desc: '3回合内生命不会降至1；每回合回复10%', effect: 'immortal_regen', turns: 3, regenPct: 0.1, class: 'shaman' },
+    };
+
+    // 职业数据
+    const CLASSES = {
+        sword: {
+            name: '剑侠', icon: '🗡️', desc: '连招暴击，攻守兼备',
+            hp: 100, atk: 12, def: 8, evade: 0.1,
+            energy: 3, maxEnergy: 5, energyRegen: 3,
+            basicCards: ['sword_basic_1','sword_basic_2','sword_basic_3','sword_basic_4','sword_basic_5'],
+            unlockPool: ['sword_unlock_1','sword_unlock_2','sword_unlock_3','sword_unlock_4','sword_unlock_5','sword_unlock_6','sword_unlock_7','sword_unlock_8'],
+            flows: [{name:'连招流',tag:'combo'},{name:'暴击流',tag:'crit'}]
+        },
+        assassin: {
+            name: '刺客', icon: '🗡️', desc: '潜行暗杀，剧毒致命',
+            hp: 70, atk: 18, def: 4, evade: 0.2,
+            energy: 4, maxEnergy: 7, energyRegen: 3,
+            basicCards: ['assassin_basic_1','assassin_basic_2','assassin_basic_3','assassin_basic_4','assassin_basic_5'],
+            unlockPool: ['assassin_unlock_1','assassin_unlock_2','assassin_unlock_3','assassin_unlock_4','assassin_unlock_5','assassin_unlock_6','assassin_unlock_7','assassin_unlock_8'],
+            flows: [{name:'毒杀流',tag:'poison'},{name:'刺杀流',tag:'burst'}]
+        },
+        monk: {
+            name: '武僧', icon: '👊', desc: '反伤格挡，以守代攻',
+            hp: 110, atk: 8, def: 14, evade: 0.18,
+            energy: 3, maxEnergy: 5, energyRegen: 4,
+            basicCards: ['monk_basic_1','monk_basic_2','monk_basic_3','monk_basic_4','monk_basic_5'],
+            unlockPool: ['monk_unlock_1','monk_unlock_2','monk_unlock_3','monk_unlock_4','monk_unlock_5','monk_unlock_6','monk_unlock_7','monk_unlock_8'],
+            flows: [{name:'反击流',tag:'counter'},{name:'闪避流',tag:'evade'}]
+        },
+        shaman: {
+            name: '萨满', icon: '🔮', desc: '以血为代价，掌控生死',
+            hp: 130, atk: 14, def: 6, evade: 0.05,
+            energy: 3, maxEnergy: 6, energyRegen: 2,
+            basicCards: ['shaman_basic_1','shaman_basic_2','shaman_basic_3','shaman_basic_4','shaman_basic_5'],
+            unlockPool: ['shaman_unlock_1','shaman_unlock_2','shaman_unlock_3','shaman_unlock_4','shaman_unlock_5','shaman_unlock_6','shaman_unlock_7','shaman_unlock_8'],
+            flows: [{name:'献祭流',tag:'sacrifice'},{name:'守护流',tag:'guard'}]
+        },
+    };
+
+    // 敌人模板
+    const ENEMY_TEMPLATES = [
+        { name: '山贼', icon: '👊', hp: 55, atk: 10, def: 2, gold: 18 },
+        { name: '恶霸', icon: '😈', hp: 80, atk: 12, def: 4, gold: 28 },
+        { name: '刺客', icon: '🗡️', hp: 50, atk: 18, def: 2, gold: 35, canEvade: true },
+        { name: '武僧', icon: '🧑‍🦱', hp: 110, atk: 10, def: 10, gold: 38 },
+        { name: '掌门', icon: '🧔', hp: 160, atk: 15, def: 8, gold: 70 },
+    ];
+    const BOSS_TEMPLATES = [
+        { name: '光明左使', icon: '💀', hp: 450, atk: 22, def: 14, gold: 250 },
+        { name: '魔教教主', icon: '👹', hp: 600, atk: 28, def: 18, gold: 400 },
+    ];
+
+    // 事件
+    const EVENTS = [
+        { icon: '💰', title: '黑市商人', desc: '神秘商人出售物资...', choices: [
+            { name: '买丹药(30银)', cost: 30, effect: g => { g.gold -= 30; g.healPots++; showFB('购买丹药！', 'success'); }},
+            { name: '买气力(20银)', cost: 20, effect: g => { g.gold -= 20; g.energy = g.maxEnergy; showFB('气力全满！', 'success'); }},
+            { name: '离开', effect: () => {} },
+        ]},
+        { icon: '🏠', title: '好心农家', desc: '村民邀请你休息...', choices: [
+            { name: '免费休息', effect: g => { g.player.hp = g.player.maxHp; showFB('完全恢复！', 'success'); }},
+            { name: '付钱住店(+)', cost: -20, effect: g => { g.player.hp = g.player.maxHp; g.gold += 20; showFB('恢复+20银', 'success'); }},
+        ]},
+        { icon: '⚔️', title: '江湖恩怨', desc: '侠客要与你切磋...', choices: [
+            { name: '应战', effect: g => {
+                if (Math.random() > 0.35) { g.gold += 50; showFB('胜利！+50银', 'success'); }
+                else { g.player.hp -= 30; showFB('失败！-30血', 'fail'); }
+            }},
+            { name: '绕路(-15气)', effect: g => { g.energy -= 15; showFB('绕路消耗气力', 'info'); }},
+        ]},
+        { icon: '📦', title: '神秘宝箱', desc: '落满灰尘的宝箱...', choices: [
+            { name: '小心开', effect: g => {
+                if (Math.random() > 0.3) { g.gold += 50; showFB('+50银！', 'success'); }
+                else { g.player.hp -= 30; showFB('陷阱！-30血', 'fail'); }
+            }},
+            { name: '直接开', effect: g => {
+                if (Math.random() > 0.5) { g.gold += 100; showFB('运气爆棚！', 'success'); }
+                else { g.player.hp -= 50; showFB('大陷阱！', 'fail'); }
+            }},
+            { name: '不碰', effect: () => {} },
+        ]},
+    ];
+
+    // ==================== 游戏状态 ====================
+    let G = {};
+
+    function initGame() {
+        G = {
+            phase: 'main',
+            player: null,
+            deck: [], hand: [], discard: [],
+            enemies: [],
+            gold: 0,
+            healPots: 0,
+            energy: 0, maxEnergy: 5, energyRegen: 3,
+            turn: 1,
+            wave: 1, maxWave: 1,
+            chapter: 1, maxChapter: 5,
+            targetEnemy: null,
+            selectedCard: null,
+            // 战斗状态
+            block: 0,
+            shield: 0,
+            thorns: 0,
+            shieldReflect: false,
+            shieldExplode: false,
+            evadeBuff: 0,
+            evadeBuffTurns: 0,
+            absoluteEvade: 0,
+            revengeBuff: 0,
+            revengeAll: false,
+            immune: false,
+            immortalTriggered: true,
+            immortalRegenTurns: 0,
+            immortalRegenPct: 0,
+            damageBuff: 0,
+            critBuff: 0,
+            critDmgBonus: 0,
+            nextAttackBuff: 0,
+            stackAtk: 0,
+            stealth: 0,
+            stealthThisTurn: false,
+            plagueAura: 0,
+            counterReflect: 0,
+            absorbRedirect: false,
+            autoCounter: 0,
+            autoCounterTurns: 0,
+            evadeOverTime: 0,
+            blockPersist: false,
+            nextTurnAtkBonus: 0,
+            nextTurnEnergyBonus: 0,
+            energyPenaltyNextTurn: false,
+            freeEpicLegend: false,
+            lifestealTurns: 0,
+            lifestealPct: 0,
+            hurtThisTurn: false,
+            dodgedThisTurn: false,
+            comboCount: 0,
+            lastCardType: null,
+            evadeDrawPending: null,
+            evadeGrantStealth: false,
+            // 永久
+            permanent: { runs: 0, wins: 0, bestChapter: 0, unlockedCards: [], unlockedMeridians: [] },
+        };
+    }
+
+    // ==================== 存储 ====================
+    function loadData() {
+        const s = localStorage.getItem('jianghu_card_v1');
+        if (s) G.permanent = JSON.parse(s);
+    }
+    function saveData() {
+        localStorage.setItem('jianghu_card_v1', JSON.stringify({
+            runs: G.permanent.runs, wins: G.permanent.wins, bestChapter: G.permanent.bestChapter,
+            unlockedCards: G.permanent.unlockedCards,
+        }));
+    }
+    function resetAll() {
+        if (confirm('重置所有进度？')) { localStorage.removeItem('jianghu_card_v1'); location.reload(); }
+    }
+
+    // ==================== 界面 ====================
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function updateMain() {
+        document.getElementById('stRuns').textContent = G.permanent.runs;
+        document.getElementById('stWins').textContent = G.permanent.wins;
+        document.getElementById('stBest').textContent = G.permanent.bestChapter;
+        document.getElementById('stCards').textContent = (G.permanent.unlockedCards || []).length;
+    }
+
+    // ==================== 职业选择 ====================
+    let selClass = 'sword';
+    function showClassSelect() {
+        const list = document.getElementById('classList');
+        list.innerHTML = '';
+        Object.entries(CLASSES).forEach(([id, c]) => {
+            const card = document.createElement('div');
+            card.className = 'class-card' + (id === selClass ? ' sel' : '');
+            card.innerHTML = `
+                <div class="class-icon">${c.icon}</div>
+                <div>
+                    <div class="class-name">${c.name}</div>
+                    <div class="class-desc">${c.desc}</div>
+                    <div class="class-stats">
+                        <span class="stat-item">❤️${c.hp}</span>
+                        <span class="stat-item">⚔️${c.atk}</span>
+                        <span class="stat-item">🛡️${c.def}</span>
+                        <span class="stat-item">💨${Math.floor(c.evade*100)}%</span>
+                    </div>
+                    <div class="flow-tags">
+                        ${c.flows.map(f => `<span class="flow-tag ${f.tag}">${f.name}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+            card.onclick = () => {
+                document.querySelectorAll('.class-card').forEach(c => c.classList.remove('sel'));
+                card.classList.add('sel');
+                selClass = id;
+            };
+            list.appendChild(card);
+        });
+    }
+
+    function confirmClass() {
+        const cls = CLASSES[selClass];
+        G.permanent.runs++;
+        saveData();
+
+        // 初始化玩家
+        G.player = {
+            class: selClass, name: cls.name, icon: cls.icon,
+            hp: cls.hp, maxHp: cls.hp, atk: cls.atk, def: cls.def, evade: cls.evade,
+        };
+        G.maxEnergy = cls.maxEnergy;
+        G.energy = cls.energy;
+        G.energyRegen = cls.energyRegen;
+
+        // 构建初始牌组（每种基础卡×2 = 10张）
+        let basicIds = [];
+        cls.basicCards.forEach(id => {
+            basicIds.push(id);
+            basicIds.push(id); // 每种2张
+        });
+        // 加入已解锁的同职业卡（只加入当前职业的卡牌）
+        (G.permanent.unlockedCards || []).forEach(id => {
+            const card = ALL_CARDS[id];
+            if (card && card.class === selClass) basicIds.push(id);
+        });
+        G.deck = basicIds.map(id => ({...ALL_CARDS[id]})); // 存卡牌对象
+        shuffle(G.deck);
+        // 固有(Innate)机制：将带innate的牌移到牌堆顶部，确保首回合必定抽到
+        const innateCards = G.deck.filter(c => c.innate);
+        const normalCards = G.deck.filter(c => !c.innate);
+        G.deck = [...normalCards, ...innateCards]; // innate牌在顶部（pop从尾部取）
+        G.hand = []; G.discard = [];
+        G.gold = 0; G.healPots = 0;
+        G.wave = 1; G.chapter = 1; G.turn = 1;
+
+        // 重置战斗状态
+        resetBattleState();
+
+        showScreen('screenBattle');
+        showWaveBanner(`章节 ${G.chapter} - 第 ${G.wave} 波`);
+        spawnEnemies();
+        drawCards(5);
+        renderAll();
+    }
+
+    function resetBattleState() {
+        G.block = 0; G.shield = 0; G.thorns = 0;
+        G.shieldReflect = false; G.shieldExplode = false;
+        G.evadeBuff = 0; G.evadeBuffTurns = 0; G.absoluteEvade = 0;
+        G.revengeBuff = 0; G.revengeAll = false;
+        G.immune = false;
+        // 萨满被动：每场战斗免死一次
+        G.immortalTriggered = (G.player && G.player.class === 'shaman') ? false : true;
+        G.immortalRegenTurns = 0; G.immortalRegenPct = 0;
+        G.damageBuff = 0; G.critBuff = 0; G.critDmgBonus = 0;
+        G.nextAttackBuff = 0; G.stackAtk = 0;
+        G.stealth = 0; G.stealthThisTurn = false;
+        G.plagueAura = 0;
+        G.counterReflect = 0; G.absorbRedirect = false;
+        G.autoCounter = 0; G.autoCounterTurns = 0;
+        G.evadeOverTime = 0; G.blockPersist = false;
+        G.nextTurnAtkBonus = 0; G.nextTurnEnergyBonus = 0;
+        G.energyPenaltyNextTurn = false;
+        G.freeEpicLegend = false;
+        G.lifestealTurns = 0; G.lifestealPct = 0;
+        G.hurtThisTurn = false; G.dodgedThisTurn = false;
+        G.comboCount = 0; G.lastCardType = null;
+        G.evadeDrawPending = null; G.evadeGrantStealth = false;
+    }
+
+    // ==================== 战斗系统 ====================
+    function spawnEnemies() {
+        G.enemies = [];
+        const isBoss = G.chapter === G.maxChapter;
+        const clsDmgMult = 0.8 + G.chapter * 0.15;
+
+        if (isBoss) {
+            const boss = BOSS_TEMPLATES[G.chapter - 1] || BOSS_TEMPLATES[0];
+            G.enemies.push({...boss, hp: Math.floor(boss.hp * clsDmgMult), maxHp: Math.floor(boss.hp * clsDmgMult)});
+        } else {
+            const count = 2;
+            const usedNames = new Set();
+            for (let i = 0; i < count; i++) {
+                let tmpl;
+                do { tmpl = ENEMY_TEMPLATES[Math.floor(Math.random() * ENEMY_TEMPLATES.length)]; }
+                while (usedNames.has(tmpl.name) && usedNames.size < ENEMY_TEMPLATES.length);
+                usedNames.add(tmpl.name);
+                G.enemies.push({
+                    ...tmpl,
+                    hp: Math.floor(tmpl.hp * clsDmgMult),
+                    maxHp: Math.floor(tmpl.hp * clsDmgMult),
+                    poison: 0, poisonTurns: 0,
+                    marked: false, markedTurns: 0,
+                });
+            }
+        }
+    }
+
+    function drawCards(n) {
+        for (let i = 0; i < n; i++) {
+            if (G.hand.length >= 10) break; // 手牌上限10张
+            if (G.deck.length === 0) {
+                if (G.discard.length === 0) break;
+                // discard 中存的是字符串ID，转换回卡牌对象再洗牌
+                G.deck = G.discard.filter(id => ALL_CARDS[id]).map(id => ({...ALL_CARDS[id]}));
+                G.discard = [];
+                shuffle(G.deck);
+            }
+            if (G.deck.length > 0) {
+                const card = G.deck.pop();
+                // 给卡牌实例一个唯一ID（用于丢弃时定位）
+                card._instId = Math.random().toString(36).substr(2, 5);
+                G.hand.push(card);
+            }
+        }
+    }
+
+    function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } }
+
+    function renderAll() {
+        renderEnemies();
+        renderPlayer();
+        renderHand();
+        document.getElementById('rGold').textContent = G.gold;
+        document.getElementById('rChapter').textContent = G.chapter;
+        document.getElementById('rEnergy').textContent = G.energy;
+        document.getElementById('rMaxEnergy').textContent = G.maxEnergy;
+        document.getElementById('healCount').textContent = G.healPots;
+        document.getElementById('turnInfo').textContent = `回合 ${G.turn}`;
+        // 连击计数器（剑侠特色）
+        const comboEl = document.getElementById('comboDisplay');
+        if (G.player && G.player.class === 'sword' && G.comboCount > 0) {
+            comboEl.style.display = '';
+            document.getElementById('rCombo').textContent = G.comboCount;
+        } else {
+            comboEl.style.display = 'none';
+        }
+        document.getElementById('btnHeal').disabled = G.healPots <= 0;
+    }
+
+    function renderEnemies() {
+        const list = document.getElementById('enemyList');
+        list.innerHTML = '';
+        G.enemies.forEach((e, i) => {
+            const dead = e.hp <= 0;
+            const targeted = G.targetEnemy === i;
+            let debuffs = [];
+            if (e.poison > 0) debuffs.push(`☠️${e.poison}`);
+            if (e.marked) debuffs.push('💀标记');
+            if (e.wounded) debuffs.push('🩸重伤');
+            const debuff = debuffs.join(' ');
+            list.innerHTML += `
+                <div class="enemy-card ${dead ? 'dead' : ''} ${targeted ? 'targeted' : ''}" onclick="selectEnemy(${i})">
+                    ${debuff ? `<div class="enemy-debuff">${debuff}</div>` : ''}
+                    <div class="enemy-icon">${e.icon}</div>
+                    <div class="enemy-info">
+                        <div class="enemy-name">${e.name}</div>
+                        <div class="enemy-status">⚔️${e.atk} 🛡️${e.def}</div>
+                        <div class="hp-bar-bg">
+                            <div class="hp-bar-fill" style="width:${Math.max(0, e.hp/e.maxHp*100)}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function renderPlayer() {
+        const p = G.player;
+        let buffs = [];
+        if (G.stealth > 0) buffs.push(`<span class="buff-tag special">潜行${G.stealth}</span>`);
+        if (G.absoluteEvade > 0) buffs.push(`<span class="buff-tag buff">闪避×${G.absoluteEvade}</span>`);
+        if (G.evadeBuff > 0) buffs.push(`<span class="buff-tag buff">闪避+${Math.floor(G.evadeBuff*100)}%</span>`);
+        if (G.block > 0) buffs.push(`<span class="buff-tag buff">格挡${G.block}</span>`);
+        if (G.shield > 0) buffs.push(`<span class="buff-tag buff">护盾${G.shield}</span>`);
+        if (G.thorns > 0) buffs.push(`<span class="buff-tag special">荆棘${G.thorns}</span>`);
+        if (G.counterReflect > 0) buffs.push(`<span class="buff-tag special">反震</span>`);
+        if (G.absorbRedirect) buffs.push(`<span class="buff-tag special">无相转</span>`);
+        if (G.autoCounter > 0) buffs.push(`<span class="buff-tag special">反击${G.autoCounter}×${G.autoCounterTurns}回合</span>`);
+        if (G.nextAttackBuff > 0) buffs.push(`<span class="buff-tag buff">蓄力+${Math.floor(G.nextAttackBuff*100)}%</span>`);
+        if (G.stackAtk > 0) buffs.push(`<span class="buff-tag buff">剑意+${G.stackAtk}</span>`);
+        if (G.damageBuff > 0) buffs.push(`<span class="buff-tag buff">攻击+${Math.floor(G.damageBuff*100)}%</span>`);
+        if (G.critBuff > 0) buffs.push(`<span class="buff-tag buff">暴击+${Math.floor(G.critBuff*100)}%</span>`);
+        if (G.immune) buffs.push(`<span class="buff-tag special">无敌</span>`);
+        if (!G.immortalTriggered) buffs.push(`<span class="buff-tag special">不死${G.immortalRegenTurns > 0 ? G.immortalRegenTurns + '回合' : ''}</span>`);
+        if (G.lifestealTurns > 0) buffs.push(`<span class="buff-tag special">吸血${G.lifestealTurns}回合</span>`);
+        if (G.plagueAura > 0) buffs.push(`<span class="buff-tag special">瘟疫+${G.plagueAura}</span>`);
+        if (G.evadeOverTime > 0) buffs.push(`<span class="buff-tag buff">凌波${G.evadeOverTime}回合</span>`);
+        if (G.freeEpicLegend) buffs.push(`<span class="buff-tag special">免费</span>`);
+
+        document.getElementById('playerCard').innerHTML = `
+            <div class="player-icon">${p.icon}</div>
+            <div class="player-info">
+                <div class="player-name">${p.name}</div>
+                <div class="player-status">
+                    <span>❤️${p.hp}/${p.maxHp}</span>
+                    <span>⚔️${p.atk}</span>
+                    <span>🛡️${p.def}</span>
+                </div>
+                ${buffs.length ? `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">${buffs.join('')}</div>` : ''}
+            </div>
+        `;
+    }
+
+    function renderHand() {
+        const list = document.getElementById('handList');
+        list.innerHTML = '';
+        document.getElementById('handCount').textContent = G.hand.length;
+
+        G.hand.forEach((card, i) => {
+            // 攻击牌必须选目标才能出，其他牌只需要能量够
+            const needsTarget = card.type === 'attack';
+            const canPlay = G.energy >= card.cost && (!needsTarget || G.targetEnemy !== null);
+            const sel = G.selectedCard === i;
+
+            // 萨满扣血牌：血量不够则不能出
+            let cantPlay = false;
+            if (card.effect === 'sacrifice_damage' || card.effect === 'sacrifice_aoe' || card.effect === 'sacrifice_big') {
+                const costHp = card.costHp || Math.floor(G.player.hp * card.costPct);
+                if (G.player.hp <= costHp) cantPlay = true;
+            }
+
+            const rarityDot = card.rarity === 'legend' ? '◆' : card.rarity === 'epic' ? '◇' : card.rarity === 'rare' ? '○' : '';
+            // 词缀标签
+            let kwTags = '';
+            if (card.exhaust) kwTags += '<span class="kw-tag exhaust">消耗</span>';
+            if (card.retain) kwTags += '<span class="kw-tag retain">保留</span>';
+            if (card.innate) kwTags += '<span class="kw-tag innate">固有</span>';
+            // 血祭免费判定
+            const isFree = G.freeEpicLegend && (card.rarity === 'epic' || card.rarity === 'legend');
+            const displayCost = isFree ? 0 : card.cost;
+
+            list.innerHTML += `
+                <div class="card-item ${card.type} ${sel ? 'selected' : ''} ${!canPlay || cantPlay ? 'cant-play' : ''}"
+                     onclick="selectCard(${i})">
+                    ${rarityDot ? `<div class="card-rarity-dot ${card.rarity}">${rarityDot}</div>` : ''}
+                    <div class="card-cost ${isFree ? 'free' : ''}">⚡${displayCost}</div>
+                    <div class="card-icon">${card.icon}</div>
+                    <div class="card-name">${card.name}</div>
+                    <div class="card-desc">${card.desc}</div>
+                    ${kwTags ? `<div class="card-kw">${kwTags}</div>` : ''}
+                    <div class="card-type-tag">${card.type === 'attack' ? '攻' : card.type === 'defense' ? '防' : card.type === 'mobility' ? '机' : '特'}</div>
+                </div>
+            `;
+        });
+
+        document.getElementById('btnPlay').disabled = G.selectedCard === null;
+    }
+
+    function selectEnemy(idx) {
+        if (G.enemies[idx].hp <= 0) return;
+        G.targetEnemy = idx;
+        renderEnemies();
+        renderHand();
+    }
+
+    function selectCard(idx) {
+        const card = G.hand[idx];
+        // 血祭免费判定
+        const effectiveCost = (G.freeEpicLegend && (card.rarity === 'epic' || card.rarity === 'legend')) ? 0 : card.cost;
+        if (G.energy < effectiveCost) { showFB('气力不足！', 'fail'); return; }
+        
+        // 攻击牌必须先选目标
+        if (card.type === 'attack' && G.targetEnemy === null) {
+            showFB('请先选择攻击目标！', 'info');
+            return;
+        }
+        
+        G.selectedCard = idx;
+        renderHand();
+    }
+
+    // ==================== 出牌 ====================
+    function playCard() {
+        if (G.selectedCard === null) return;
+        const card = G.hand[G.selectedCard];
+        // 血祭免费判定
+        const effectiveCost = (G.freeEpicLegend && (card.rarity === 'epic' || card.rarity === 'legend')) ? 0 : card.cost;
+        if (G.energy < effectiveCost) { showFB('气力不足！', 'fail'); return; }
+
+        G.energy -= effectiveCost;
+        if (effectiveCost === 0 && card.cost > 0) {
+            G.freeEpicLegend = false; // 使用一次后重置
+            showFB('血祭免费！', 'special');
+        }
+        G.hand.splice(G.selectedCard, 1);
+        G.selectedCard = null;
+
+        // 连击计数（剑侠特色：每打出一张牌，后续攻击+2）
+        G.comboCount++;
+
+        executeCard(card);
+
+        // 消耗词缀：不进入弃牌堆，从本局移除
+        if (card.exhaust) {
+            showFB(`「${card.name}」消耗！本局不再出现`, 'info');
+        } else {
+            G.discard.push(card.id);
+        }
+        renderAll();
+
+        // 检查
+        checkDead();
+    }
+
+    function executeCard(card) {
+        const enemy = G.targetEnemy !== null ? G.enemies[G.targetEnemy] : null;
+
+        // 萨满HP代价（百分比）
+        if (card.hpCostPct) {
+            const hpCost = Math.floor(G.player.maxHp * card.hpCostPct);
+            G.player.hp -= hpCost;
+            if (G.player.hp < 1) G.player.hp = 1;
+            showFB(`消耗${hpCost}生命！`, 'fail');
+        }
+        // 萨满HP代价（固定值）
+        if (card.hpCost) {
+            G.player.hp -= card.hpCost;
+            if (G.player.hp < 1) G.player.hp = 1;
+            showFB(`消耗${card.hpCost}生命！`, 'fail');
+        }
+
+        // 蓄力buff应用
+        let nextAtkMult = 1;
+        if (G.nextAttackBuff > 0 && card.type === 'attack') {
+            nextAtkMult = 1 + G.nextAttackBuff;
+            G.nextAttackBuff = 0;
+        }
+
+        switch (card.effect) {
+            // ==================== 通用 ====================
+            case 'damage':
+                if (enemy) dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                break;
+
+            // ==================== 剑侠 ====================
+            // 上挑：8伤害；[连招]：本回合非首张牌则抽1张
+            case 'sword_shangtiao':
+                if (enemy) dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                if (G.comboCount > 1) {
+                    drawCards(1);
+                    showFB(`[连招×${G.comboCount}] 抽1张牌！`, 'success');
+                }
+                break;
+
+            // 连环剑：8伤害；[连招]：本回合非首张牌则回1点能量
+            case 'sword_lianhuan':
+                if (enemy) dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                if (G.comboCount > 1) {
+                    G.energy = Math.min(G.maxEnergy, G.energy + 1);
+                    showFB(`[连招×${G.comboCount}] 回1点能量！`, 'success');
+                }
+                break;
+
+            // 连斩：多段攻击
+            case 'damage_multi':
+                if (enemy) {
+                    for (let i = 0; i < (card.hits || 3); i++) {
+                        if (enemy.hp > 0) dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                    }
+                }
+                break;
+
+            // 破甲：忽视防御
+            case 'damage_armor_ignore':
+                if (enemy) dealDamage(enemy, Math.floor(card.value * nextAtkMult), 0, card.ignorePct || 0.25);
+                break;
+
+            // 蓄力：下一次攻击+100%
+            case 'buff_next_attack':
+                G.nextAttackBuff = (G.nextAttackBuff || 0) + (card.value || 1.0);
+                showFB(`下次攻击伤害+${Math.floor(card.value * 100)}%！`, 'info');
+                break;
+
+            // 剑意：每次攻击+3（本场战斗叠加）
+            case 'buff_stack_atk':
+                G.stackAtk = (G.stackAtk || 0) + (card.value || 3);
+                showFB(`剑意叠加！攻击永久+${card.value}（当前+${G.stackAtk}）`, 'info');
+                break;
+
+            // 暴击姿态
+            case 'buff_crit':
+                G.critBuff = Math.max(G.critBuff, card.value || 0.6);
+                showFB(`暴击率+${Math.floor((card.value || 0.6) * 100)}%！`, 'info');
+                break;
+
+            // 剑芒：伤害+暴伤
+            case 'buff_crit_damage':
+                G.damageBuff = Math.max(G.damageBuff, card.value || 0.4);
+                G.critDmgBonus = Math.max(G.critDmgBonus, card.critBonus || 0.5);
+                showFB('剑芒！伤害与暴伤提升！', 'info');
+                break;
+
+            // 万剑归宗：6次递增伤害
+            case 'damage_escalate':
+                if (enemy) {
+                    let esVal = card.baseValue || 5;
+                    for (let i = 0; i < (card.hits || 6); i++) {
+                        if (enemy.hp <= 0) break;
+                        dealDamage(enemy, Math.floor(esVal * nextAtkMult));
+                        esVal += (card.escalate || 3);
+                    }
+                }
+                break;
+
+            // 一剑倾城：35伤害暴击回满能
+            case 'damage_crit_energy':
+                if (enemy) {
+                    const isCrit = Math.random() < (G.critBuff + (card.critPct || 0.4));
+                    if (isCrit) {
+                        dealDamage(enemy, Math.floor(card.value * nextAtkMult * (2 + G.critDmgBonus)), 0, 0, true);
+                        G.energy = G.maxEnergy;
+                        showFB('暴击！能量回满！', 'special');
+                    } else {
+                        dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                    }
+                }
+                break;
+
+            // 独孤九剑：无视防御与闪避
+            case 'damage_true':
+                if (enemy) dealDamage(enemy, Math.floor(card.value * nextAtkMult), 2);
+                break;
+
+            // 天外飞仙：当前生命百分比真实伤害
+            case 'damage_percent_true':
+                if (enemy) {
+                    const pctDmg = Math.floor(enemy.hp * (card.value || 0.5));
+                    enemy.hp -= pctDmg;
+                    showDmgPop(pctDmg, 'true');
+                    showFB(`天外飞仙！${pctDmg}真实伤害！`, 'special');
+                }
+                break;
+
+            // ==================== 刺客 ====================
+            // 暗刺：潜行下×3
+            case 'assassin_anchi':
+                if (enemy) {
+                    let dmgVal = card.value;
+                    if (G.stealth > 0) {
+                        dmgVal *= (card.stealthMult || 3);
+                        G.stealth = 0;
+                        showFB('[潜行] 暗刺伤害×3！', 'special');
+                    }
+                    dealDamage(enemy, Math.floor(dmgVal * nextAtkMult));
+                }
+                break;
+
+            // 潜行
+            case 'stealth':
+                G.stealth = (G.stealth || 0) + (card.value || 1);
+                G.stealthThisTurn = true;
+                showFB('进入潜行！本回合不能被选中', 'info');
+                break;
+
+            // 毒刃：伤害+中毒层数
+            case 'damage_poison':
+                if (enemy) {
+                    dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                    enemy.poison = (enemy.poison || 0) + (card.poisonStacks || 3);
+                    showFB(`附加${card.poisonStacks || 3}层中毒！`, 'special');
+                }
+                break;
+
+            // 绝对闪避（瞬闪：闪避成功获得潜行标记）
+            case 'absolute_evade':
+                G.absoluteEvade = (G.absoluteEvade || 0) + (card.value || 2);
+                if (card.grantStealth) G.evadeGrantStealth = true;
+                showFB(`获得${card.value || 2}次绝对闪避！`, 'info');
+                break;
+
+            // 淬毒：中毒层数翻倍
+            case 'poison_double':
+                if (enemy && enemy.poison > 0) {
+                    enemy.poison *= 2;
+                    showFB(`中毒翻倍！当前${enemy.poison}层`, 'special');
+                } else {
+                    showFB('目标未中毒！', 'fail');
+                }
+                break;
+
+            // 致命：满血暴击
+            case 'damage_crit_if_full':
+                if (enemy) {
+                    if (enemy.hp >= enemy.maxHp) {
+                        dealDamage(enemy, Math.floor(card.value * nextAtkMult * (2 + G.critDmgBonus)), 0, 0, true);
+                        showFB('满血暴击！', 'special');
+                    } else {
+                        dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                    }
+                }
+                break;
+
+            // 暗杀：低血斩杀
+            case 'damage_execute':
+                if (enemy) {
+                    if (enemy.hp / enemy.maxHp < (card.executePct || 0.3)) {
+                        enemy.hp = 0;
+                        showFB('斩杀！', 'special');
+                    } else {
+                        dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                    }
+                }
+                break;
+
+            // 剧毒之牙：每层中毒额外伤害
+            case 'damage_poison_scale':
+                if (enemy) {
+                    const bonusDmg = (enemy.poison || 0) * (card.perStack || 3);
+                    dealDamage(enemy, Math.floor((card.value + bonusDmg) * nextAtkMult));
+                    showFB(`中毒加成+${bonusDmg}伤害！`, 'info');
+                }
+                break;
+
+            // 血刃：击杀+永久攻击
+            case 'damage_kill_bonus':
+                if (enemy) {
+                    dealDamage(enemy, Math.floor((card.value || 12) * nextAtkMult));
+                    if (enemy.hp <= 0) {
+                        G.player.atk += (card.atkBonus || 2);
+                        showFB(`击杀！永久攻击+${card.atkBonus || 2}`, 'special');
+                    }
+                }
+                break;
+
+            // 毒爆：移除中毒，每层10伤害
+            case 'poison_explode':
+                if (enemy) {
+                    const stacks = enemy.poison || 0;
+                    if (stacks > 0) {
+                        const explodeDmg = stacks * (card.perStack || 10);
+                        enemy.hp -= explodeDmg;
+                        enemy.poison = 0;
+                        showDmgPop(explodeDmg, 'poison');
+                        showFB(`毒爆！${stacks}层×${card.perStack || 10}=${explodeDmg}伤害！`, 'special');
+                    } else {
+                        showFB('目标未中毒！', 'fail');
+                    }
+                }
+                break;
+
+            // 幻影杀：随机5次+潜行
+            case 'phantom_strike':
+                {
+                    const alive = G.enemies.filter(e => e.hp > 0);
+                    for (let i = 0; i < (card.hits || 5); i++) {
+                        const target = alive[Math.floor(Math.random() * alive.length)];
+                        if (target && target.hp > 0) {
+                            dealDamage(target, Math.floor((card.value || 8) * nextAtkMult));
+                        }
+                        if (Math.random() < (card.stealthPct || 0.5)) {
+                            G.stealth = (G.stealth || 0) + 1;
+                        }
+                    }
+                    if (G.stealth > 0) showFB(`幻影杀！获得${G.stealth}层潜行`, 'special');
+                }
+                break;
+
+            // 瘟疫之源：每回合全场+5中毒
+            case 'plague_aura':
+                G.plagueAura = (G.plagueAura || 0) + (card.value || 5);
+                showFB(`瘟疫之源！每回合全场+${G.plagueAura}中毒`, 'special');
+                break;
+
+            // 死神标记：伤害+100%
+            case 'mark_death':
+                if (enemy) {
+                    enemy.marked = true;
+                    enemy.markMult = (card.value || 1.0);
+                    enemy.markedTurns = 999;
+                    showFB('死神标记！受到伤害+100%', 'special');
+                }
+                break;
+
+            // ==================== 武僧 ====================
+            // 铁山靠：格挡+下回合攻击
+            case 'block_atk':
+                G.block += (card.blockValue || 10);
+                G.nextTurnAtkBonus = (G.nextTurnAtkBonus || 0) + (card.atkBonus || 5);
+                showFB(`格挡+${card.blockValue || 10}！下回合攻击+${card.atkBonus || 5}`, 'info');
+                break;
+
+            // 金刚拳：伤害+反伤值
+            case 'damage_thorns':
+                if (enemy) dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                G.thorns += (card.thorns || 5);
+                showFB(`反伤值+${card.thorns || 5}！`, 'info');
+                break;
+
+            // 反伤震：受击返还100%
+            case 'counter_reflect':
+                G.counterReflect = (card.value || 1.0);
+                showFB('反震！受击返还100%伤害', 'special');
+                break;
+
+            // 醉拳闪：50%闪避成功抽牌
+            case 'evade_draw':
+                G.evadeDrawPending = { evadePct: card.evadePct || 0.5, drawCount: card.drawCount || 2 };
+                showFB(`醉拳闪！50%闪避，成功抽${card.drawCount || 2}张`, 'info');
+                break;
+
+            // 无相转：抵消下次伤害并反弹
+            case 'absorb_redirect':
+                G.absorbRedirect = true;
+                showFB('无相转！抵消下次伤害并转移', 'special');
+                break;
+
+            // 震天掌：闪避过攻击则翻倍+回1能量
+            case 'damage_if_dodged':
+                if (enemy) {
+                    const mult = G.dodgedThisTurn ? 2 : 1;
+                    dealDamage(enemy, Math.floor(card.value * mult * nextAtkMult));
+                    if (mult === 2) {
+                        G.energy = Math.min(G.maxEnergy, G.energy + 1);
+                        showFB('闪避触发！伤害翻倍+1能量！', 'special');
+                    }
+                }
+                break;
+
+            // 震天掌旧版（兼容）
+            case 'damage_if_unhurt':
+                if (enemy) {
+                    const mult = G.hurtThisTurn ? 1 : 2;
+                    dealDamage(enemy, Math.floor(card.value * mult * nextAtkMult));
+                    if (mult === 2) showFB('未受伤！伤害翻倍！', 'special');
+                }
+                break;
+
+            // 铁布衫：护甲不消失
+            case 'armor_persist':
+                G.block += (card.value || 25);
+                G.blockPersist = true;
+                showFB(`护甲+${card.value || 25}（不消失）！`, 'info');
+                break;
+
+            // 凌波微步：3回合每回合+1闪避
+            case 'evade_over_time':
+                G.evadeOverTime = (card.turns || 3);
+                showFB(`凌波微步！${card.turns || 3}回合每回合+1闪避`, 'info');
+                break;
+
+            // 雾身：丢弃手牌+能量
+            case 'discard_all_energy':
+                G.discard.push(...G.hand.map(c => c.id));
+                G.hand = [];
+                G.nextTurnEnergyBonus = (G.nextTurnEnergyBonus || 0) + (card.energyBonus || 2);
+                showFB(`雾身！下回合能量+${card.energyBonus || 2}`, 'special');
+                break;
+
+            // 金刚不坏：无敌+下回合归零
+            case 'invincible_penalty':
+                G.immune = true;
+                G.energyPenaltyNextTurn = true;
+                showFB('金刚不坏！本回合无敌，下回合能量归零', 'special');
+                break;
+
+            // 幻影迷踪：自动反击
+            case 'auto_counter':
+                G.autoCounter = (card.value || 15);
+                G.autoCounterTurns = (card.turns || 2);
+                showFB(`幻影迷踪！受击反击${card.value}伤害，持续${card.turns}回合`, 'special');
+                break;
+
+            // 天地同寿：消耗能量爆发
+            case 'energy_burst':
+                {
+                    const burstDmg = G.energy * (card.perEnergy || 20);
+                    G.energy = 0;
+                    G.enemies.filter(e => e.hp > 0).forEach(e => {
+                        e.hp -= burstDmg;
+                        showDmgPop(burstDmg, 'special');
+                    });
+                    showFB(`天地同寿！全场${burstDmg}伤害！`, 'special');
+                }
+                break;
+
+            // 逍遥游：3层预知
+            case 'foresight':
+                G.absoluteEvade = (G.absoluteEvade || 0) + (card.value || 3);
+                showFB(`预知！必然避开下${card.value || 3}次攻击`, 'special');
+                break;
+
+            // ==================== 萨满 ====================
+            // 真气掌：伤害+回血
+            case 'damage_heal':
+                if (enemy) dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                {
+                    const healAmt = Math.min(card.heal || 5, G.player.maxHp - G.player.hp);
+                    G.player.hp += healAmt;
+                    if (healAmt > 0) showFB(`回复${healAmt}生命！`, 'success');
+                }
+                break;
+
+            // 噬魂击：击杀回血
+            case 'damage_kill_heal':
+                if (enemy) {
+                    dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                    if (enemy.hp <= 0) {
+                        const healAmt = Math.floor(G.player.maxHp * (card.healPct || 0.2));
+                        G.player.hp = Math.min(G.player.maxHp, G.player.hp + healAmt);
+                        showFB(`击杀回复${healAmt}生命！`, 'success');
+                    }
+                }
+                break;
+
+            // 治疗
+            case 'heal':
+                {
+                    const healVal = Math.min(card.value || 20, G.player.maxHp - G.player.hp);
+                    G.player.hp += healVal;
+                    showFB(`恢复${healVal}生命！`, 'success');
+                }
+                break;
+
+            // 护盾
+            case 'shield':
+                G.shield += (card.value || 30);
+                showFB(`护盾+${card.value || 30}！`, 'info');
+                break;
+
+            // 血祭：消耗生命换能量+抽牌（萨满核心发动机）
+            case 'blood_sacrifice_engine':
+                G.player.hp -= (card.hpCost || 8);
+                if (G.player.hp < 1) G.player.hp = 1;
+                G.energy = Math.min(G.maxEnergy, G.energy + (card.energyGain || 2));
+                drawCards(1);
+                showFB(`血祭！-${card.hpCost || 8}血，+${card.energyGain || 2}能量，抽1张`, 'special');
+                break;
+
+            // 血祭免费（旧版兼容）
+            case 'blood_discount':
+                G.freeEpicLegend = true;
+                showFB('血祭！下张史诗/传说牌免费', 'special');
+                break;
+
+            // 燃血：+攻击力
+            case 'sacrifice_buff_atk':
+                G.damageBuff += (card.value || 15) / G.player.atk;
+                showFB(`燃血！本回合攻击+${card.value || 15}`, 'special');
+                break;
+
+            // 自爆：已损失生命200%全场伤害
+            case 'sacrifice_lost_hp_aoe':
+                {
+                    const lostHp = G.player.maxHp - G.player.hp;
+                    const aoeDmg = Math.floor(lostHp * (card.mult || 2.0));
+                    G.enemies.filter(e => e.hp > 0).forEach(e => {
+                        e.hp -= aoeDmg;
+                        showDmgPop(aoeDmg, 'special');
+                    });
+                    showFB(`自爆！${aoeDmg}全场伤害！`, 'special');
+                }
+                break;
+
+            // 荆棘护盾
+            case 'thorns_shield':
+                G.shield += (card.shield || 20);
+                G.thorns = Math.max(G.thorns, card.thorns || 20);
+                showFB(`荆棘护盾！${card.shield}盾+${card.thorns}反伤`, 'special');
+                break;
+
+            // 圣光剑：残血加成
+            case 'damage_lowhp_scale':
+                if (enemy) {
+                    const missingPct = Math.floor((1 - G.player.hp / G.player.maxHp) * 10);
+                    const bonusDmg = missingPct * (card.perTenPct || 5);
+                    dealDamage(enemy, Math.floor((card.value + bonusDmg) * nextAtkMult));
+                    if (bonusDmg > 0) showFB(`残血加成+${bonusDmg}伤害！`, 'info');
+                }
+                break;
+
+            // 血祭·噬：全场伤害+重伤
+            case 'sacrifice_aoe_wound':
+                G.enemies.filter(e => e.hp > 0).forEach(e => {
+                    e.hp -= card.value || 40;
+                    e.wounded = true;
+                    e.woundedTurns = 3;
+                    showDmgPop(card.value || 40, 'special');
+                });
+                showFB('血祭·噬！全场重伤！', 'special');
+                break;
+
+            // 守护反击：盾碎全场伤害
+            case 'shield_explode':
+                G.shield += (card.shield || 50);
+                G.shieldExplode = true;
+                showFB(`守护反击！${card.shield || 50}护盾，碎则爆！`, 'special');
+                break;
+
+            // 血魔大法：吸血5回合
+            case 'blood_demon_lifesteal':
+                G.lifestealTurns = (card.turns || 5);
+                G.lifestealPct = (card.lifesteal || 0.5);
+                showFB(`血魔大法！${card.turns}回合内伤害50%转治疗`, 'special');
+                break;
+
+            // 不死之身：3回合不死+回血
+            case 'immortal_regen':
+                G.immortalRegenTurns = (card.turns || 3);
+                G.immortalRegenPct = (card.regenPct || 0.1);
+                G.immortalTriggered = false;
+                showFB(`不死之身！${card.turns}回合不死+每回合回复10%`, 'special');
+                break;
+
+            default:
+                console.warn('[executeCard] 未实现的效果:', card.effect);
+                break;
+        }
+
+        // 记录上一张牌类型（用于连招判定）
+        G.lastCardType = card.type;
+    }
+
+    function dealDamage(enemy, baseDmg, mode = 0, ignoreDefPct = 0, forceCrit = false) {
+        if (!enemy || enemy.hp <= 0) return 0;
+
+        // 闪避判定（只有标记了canEvade的敌人才有闪避能力，mode=2无视闪避）
+        if (mode === 0 && !forceCrit && enemy.canEvade && Math.random() < 0.2) {
+            showDmgPop(0, 'miss');
+            return 0;
+        }
+
+        let dmg = baseDmg;
+        // 连击加成（剑侠特色：本回合每打出一张牌+2伤害）
+        if (G.player && G.player.class === 'sword' && G.comboCount > 1) {
+            dmg += (G.comboCount - 1) * 2;
+        }
+        // 攻击增益
+        const atkBonus = G.damageBuff + (G.stackAtk || 0) / 20;
+        dmg = Math.floor(dmg * (1 + atkBonus));
+        // 剑意叠加加成
+        dmg += (G.stackAtk || 0);
+        // 忽视防御（mode=2完全无视）
+        if (mode !== 2) {
+            const defReduction = enemy.def * (1 - ignoreDefPct);
+            dmg = Math.floor(dmg * (1 - defReduction / (defReduction + 30)));
+        }
+        // 标记增伤（死神标记）
+        if (enemy.marked) dmg = Math.floor(dmg * (1 + (enemy.markMult || 1.0)));
+        // 重伤增伤
+        if (enemy.wounded) dmg = Math.floor(dmg * 1.3);
+        // 暴击
+        const critRate = 0.1 + G.critBuff;
+        const isCrit = forceCrit || Math.random() < critRate;
+        if (isCrit) {
+            dmg = Math.floor(dmg * (2 + G.critDmgBonus));
+            showDmgPop(dmg, 'crit');
+        } else {
+            showDmgPop(dmg, 'dmg');
+        }
+
+        enemy.hp -= dmg;
+
+        // 吸血（血魔大法）
+        if (G.lifestealTurns > 0 && G.lifestealPct > 0) {
+            const ls = Math.floor(dmg * G.lifestealPct);
+            G.player.hp = Math.min(G.player.maxHp, G.player.hp + ls);
+        }
+
+        return dmg;
+    }
+
+    function showDmgPop(amt, type) {
+        const enemyCards = document.querySelectorAll('.enemy-card:not(.dead)');
+        if (enemyCards.length === 0) return;
+        const targetCard = enemyCards[G.targetEnemy !== null && G.enemies[G.targetEnemy]?.hp > 0 ? G.targetEnemy : 0];
+        if (!targetCard) return;
+
+        const pop = document.createElement('div');
+        pop.className = `dmg-pop ${type}`;
+        pop.textContent = type === 'miss' ? '闪避' : type === 'crit' ? `${amt}!` : type === 'reflect' ? `刺${amt}` : `-${amt}`;
+        pop.style.left = '60%'; pop.style.top = '30%';
+        pop.style.transform = 'translateX(-50%)';
+        targetCard.style.position = 'relative';
+        targetCard.appendChild(pop);
+        setTimeout(() => pop.remove(), 800);
+    }
+
+    function checkDead() {
+        // 敌人死亡
+        const dead = G.enemies.filter(e => e.hp <= 0);
+        G.enemies = G.enemies.filter(e => e.hp > 0);
+        dead.forEach(e => {
+            G.gold += e.gold;
+            showFB(`击杀${e.name}！+${e.gold}银`, 'success');
+        });
+
+        G.targetEnemy = G.enemies.length > 0 ? G.enemies.findIndex(e => e.hp > 0) : null;
+
+        // 检查战斗结束（所有敌人死亡）
+        if (G.enemies.length === 0) {
+            // 战斗胜利：将手牌和弃牌全部回收入牌组
+            G.discard.push(...G.hand.map(c => c.id));
+            G.hand = [];
+            G.energy = CLASSES[G.player.class].energy; // 能量重置
+            G.turn = 1;
+            G.targetEnemy = null;
+            G.selectedCard = null;
+            resetBattleState();
+            renderAll();
+            endChapter();
+            return;
+        }
+
+        // 检查玩家死亡
+        if (G.player.hp <= 0) {
+            G.player.hp = 0;
+            endRun(false);
+        }
+
+        renderAll();
+    }
+
+    function useHeal() {
+        if (G.healPots <= 0) { showFB('没有丹药！', 'fail'); return; }
+        G.healPots--;
+        const heal = Math.min(50, G.player.maxHp - G.player.hp);
+        G.player.hp = Math.min(G.player.maxHp, G.player.hp + 50);
+        showFB(`丹药！+${heal}血`, 'success');
+        renderAll();
+    }
+
+    function endTurn() {
+        // ========== 回合结束：清空本回合临时增益 ==========
+        G.damageBuff = 0;
+        G.critBuff = 0;
+        G.critDmgBonus = 0;
+        G.revengeAll = false;
+        G.stealthThisTurn = false;
+        G.freeEpicLegend = false;
+        G.lastCardType = null;
+        G.hurtThisTurn = false;
+        G.dodgedThisTurn = false;
+        G.comboCount = 0;
+        G.evadeGrantStealth = false;
+
+        // 闪避回合递减
+        if (G.evadeBuffTurns > 0) {
+            G.evadeBuffTurns--;
+            if (G.evadeBuffTurns <= 0) G.evadeBuff = 0;
+        }
+
+        // 瘟疫之源：全场+中毒
+        if (G.plagueAura > 0) {
+            G.enemies.filter(e => e.hp > 0).forEach(e => {
+                e.poison = (e.poison || 0) + G.plagueAura;
+            });
+            showFB(`瘟疫扩散！全场+${G.plagueAura}中毒`, 'special');
+        }
+
+        // 中毒结算
+        G.enemies.forEach(e => {
+            if (e.hp > 0 && e.poison > 0) {
+                e.hp -= e.poison;
+                showFB(`${e.name}中毒-${e.poison}！`, 'special');
+            }
+            // 重伤回合递减
+            if (e.wounded && e.woundedTurns > 0) {
+                e.woundedTurns--;
+                if (e.woundedTurns <= 0) e.wounded = false;
+            }
+        });
+
+        // 不死之身回血
+        if (G.immortalRegenTurns > 0) {
+            const regenAmt = Math.floor(G.player.maxHp * G.immortalRegenPct);
+            G.player.hp = Math.min(G.player.maxHp, G.player.hp + regenAmt);
+            G.immortalRegenTurns--;
+            showFB(`不死回复+${regenAmt}！`, 'success');
+            if (G.immortalRegenTurns <= 0) {
+                G.immortalTriggered = true; // 保护结束
+            }
+        }
+
+        // 吸血回合递减
+        if (G.lifestealTurns > 0) G.lifestealTurns--;
+
+        // 自动反击回合递减
+        if (G.autoCounterTurns > 0) G.autoCounterTurns--;
+        if (G.autoCounterTurns <= 0) G.autoCounter = 0;
+
+        // ========== 敌人攻击阶段 ==========
+        G.enemies.filter(e => e.hp > 0).forEach(e => {
+            // 潜行：敌人不能选中玩家
+            if (G.stealth > 0) {
+                showFB(`潜行中！${e.name}找不到你`, 'info');
+                return;
+            }
+
+            // 绝对闪避（瞬闪/预知）
+            if (G.absoluteEvade > 0) {
+                G.absoluteEvade--;
+                G.dodgedThisTurn = true;
+                showFB(`绝对闪避！避开${e.name}攻击`, 'success');
+                // 瞬闪特效：闪避成功获得潜行
+                if (G.evadeGrantStealth) {
+                    G.stealth = (G.stealth || 0) + 1;
+                    showFB('闪避成功！获得1层潜行', 'info');
+                }
+                return;
+            }
+
+            // 普通闪避判定
+            const totalEvade = G.player.evade + G.evadeBuff;
+            if (Math.random() < totalEvade) {
+                showFB(`闪避${e.name}攻击！`, 'success');
+                G.dodgedThisTurn = true;
+                // 醉拳闪抽牌
+                if (G.evadeDrawPending) {
+                    drawCards(G.evadeDrawPending.drawCount || 2);
+                    showFB(`闪避成功！抽${G.evadeDrawPending.drawCount}张`, 'success');
+                    G.evadeDrawPending = null;
+                }
+                return;
+            }
+
+            // 免疫
+            if (G.immune) {
+                G.immune = false;
+                showFB('免疫伤害！', 'special');
+                return;
+            }
+
+            // 无相转：抵消伤害并反弹
+            if (G.absorbRedirect) {
+                G.absorbRedirect = false;
+                const redirectDmg = Math.floor(e.atk * (1 - G.player.def / (G.player.def + 30)));
+                const alive = G.enemies.filter(en => en.hp > 0 && en !== e);
+                const target = alive.length > 0 ? alive[Math.floor(Math.random() * alive.length)] : e;
+                target.hp -= redirectDmg;
+                showFB(`无相转！${redirectDmg}伤害转移给${target.name}`, 'special');
+                return;
+            }
+
+            let dmg = Math.floor(e.atk * (1 - G.player.def / (G.player.def + 30)));
+
+            // 格挡
+            if (G.block > 0) {
+                const blockAbsorb = Math.min(G.block, dmg);
+                G.block -= blockAbsorb;
+                dmg -= blockAbsorb;
+                if (blockAbsorb > 0) showFB(`格挡${blockAbsorb}伤害！`, 'info');
+                if (dmg <= 0) {
+                    // 自动反击
+                    if (G.autoCounter > 0) { e.hp -= G.autoCounter; showFB(`反击${e.name}！-${G.autoCounter}`, 'special'); }
+                    return;
+                }
+            }
+
+            // 护盾
+            if (G.shield > 0) {
+                const absorb = Math.min(G.shield, dmg);
+                G.shield -= absorb;
+                dmg -= absorb;
+                // 护盾碎时爆炸
+                if (G.shield <= 0 && G.shieldExplode) {
+                    const explodeDmg = absorb;
+                    G.enemies.filter(en => en.hp > 0).forEach(en => {
+                        en.hp -= explodeDmg;
+                    });
+                    G.shieldExplode = false;
+                    showFB(`护盾碎裂！全场${explodeDmg}爆炸伤害！`, 'special');
+                }
+                // 荆棘反伤
+                if (G.thorns > 0) {
+                    e.hp -= G.thorns;
+                    showFB(`荆棘反伤${G.thorns}！`, 'special');
+                }
+                if (dmg <= 0) return;
+            }
+
+            // 不死之身保护
+            if (G.player.hp - dmg <= 0 && G.immortalTriggered === false) {
+                G.player.hp = 1;
+                G.immortalTriggered = true;
+                showFB('不死之身触发！保命！', 'special');
+                return;
+            }
+
+            // 反伤震（受击返还100%）
+            if (G.counterReflect > 0) {
+                const reflectDmg = Math.floor(dmg * G.counterReflect);
+                e.hp -= reflectDmg;
+                G.counterReflect = 0;
+                showFB(`反震！返还${reflectDmg}伤害！`, 'special');
+            }
+
+            // 自动反击
+            if (G.autoCounter > 0) {
+                e.hp -= G.autoCounter;
+                showFB(`幻影反击${e.name}！-${G.autoCounter}`, 'special');
+            }
+
+            G.hurtThisTurn = true;
+            G.player.hp -= dmg;
+            showFB(`${e.name}攻击！-${dmg}血`, 'fail');
+        });
+
+        // 潜行消耗
+        if (G.stealth > 0) G.stealth--;
+
+        // 弃牌（保留有retain词缀的牌）
+        const retainCards = G.hand.filter(c => c.retain);
+        const discardCards = G.hand.filter(c => !c.retain);
+        G.discard.push(...discardCards.map(c => c.id));
+        G.hand = retainCards; // 保留牌留在手中
+
+        // ========== 新回合开始 ==========
+        G.turn++;
+
+        // 能量惩罚（金刚不坏后遗症）
+        if (G.energyPenaltyNextTurn) {
+            G.energy = 0;
+            G.energyPenaltyNextTurn = false;
+        } else {
+            // 能量恢复制：每回合恢复energyRegen点，不超过maxEnergy
+            const bonusEnergy = G.nextTurnEnergyBonus || 0;
+            G.energy = Math.min(G.maxEnergy, G.energy + G.energyRegen + bonusEnergy);
+            G.nextTurnEnergyBonus = 0;
+        }
+
+        // 下回合攻击加成（铁山靠）
+        if (G.nextTurnAtkBonus > 0) {
+            G.damageBuff = G.nextTurnAtkBonus / G.player.atk;
+            G.nextTurnAtkBonus = 0;
+        }
+
+        // 格挡不保留（除非铁布衫）
+        if (!G.blockPersist) {
+            G.block = 0;
+        }
+        G.blockPersist = false;
+
+        // 凌波微步：每回合+1绝对闪避
+        if (G.evadeOverTime > 0) {
+            G.absoluteEvade = (G.absoluteEvade || 0) + 1;
+            G.evadeOverTime--;
+            showFB('凌波微步！+1闪避', 'info');
+        }
+
+        G.targetEnemy = null;
+
+        // 抽牌（每回合固定抽5张）
+        drawCards(5);
+
+        // 死亡检查
+        if (G.player.hp <= 0) { G.player.hp = 0; endRun(false); }
+
+        renderAll();
+    }
+
+    function endChapter() {
+        G.permanent.bestChapter = Math.max(G.permanent.bestChapter, G.chapter);
+        if (G.chapter >= G.maxChapter) {
+            G.permanent.wins++;
+            showModal('🏆', '通关成功！', `恭喜带领「${G.player.name}」通关全部章节！\n💰 获得银两：${G.gold}`, [
+                { name: '再来一局', effect: () => { hideModal(); showScreen('screenMain'); updateMain(); }}
+            ]);
+        } else {
+            showModal('📜', '章节完成', `「${G.player.name}」完成了第${G.chapter}章！\n💰 银两：${G.gold}`, [
+                { name: '继续下一章', effect: () => { hideModal(); nextChapter(); }},
+                { name: '返回', effect: () => { hideModal(); showScreen('screenMain'); updateMain(); }}
+            ]);
+        }
+        saveData();
+    }
+
+    function nextChapter() {
+        G.chapter++;
+        G.wave = 1;
+        G.turn = 1;
+        G.gold += 50; // 章节奖励
+        // 恢复
+        G.player.hp = G.player.maxHp;
+        resetBattleState();
+        // 选卡
+        showCardPick();
+    }
+
+    function showCardPick() {
+        const cls = CLASSES[G.player.class];
+        const pool = cls.unlockPool.filter(id => !(G.permanent.unlockedCards || []).includes(id));
+        if (pool.length === 0) {
+            G.gold += 80;
+            showFB('无新卡可解锁，+80银', 'info');
+            startNextChapter();
+            return;
+        }
+
+        // 选3张
+        const picks = [];
+        const temp = [...pool];
+        for (let i = 0; i < 3 && temp.length > 0; i++) {
+            const idx = Math.floor(Math.random() * temp.length);
+            picks.push(temp.splice(idx, 1)[0]);
+        }
+
+        const container = document.getElementById('pickCards');
+        container.innerHTML = '';
+        picks.forEach(id => {
+            const card = ALL_CARDS[id];
+            const rarityClass = card.rarity === 'legend' ? 'legend' : card.rarity === 'epic' ? 'epic' : 'rare';
+            const keywords = [];
+            if (card.exhaust) keywords.push('消耗');
+            if (card.retain) keywords.push('保留');
+            if (card.innate) keywords.push('固有');
+            const kwStr = keywords.length ? `<span class="pick-card-kw">[${keywords.join('/')}]</span>` : '';
+            container.innerHTML += `
+                <div class="pick-card" onclick="pickCard('${id}')">
+                    <div class="pick-card-icon">${card.icon}</div>
+                    <div class="pick-card-info">
+                        <div class="pick-card-name">${card.name} ${kwStr} <span class="pick-card-rarity ${rarityClass}">${card.rarity === 'legend' ? '传说' : card.rarity === 'epic' ? '史诗' : '稀有'}</span></div>
+                        <div class="pick-card-type">⚡${card.cost} | ${card.type === 'attack' ? '攻击' : card.type === 'defense' ? '防御' : card.type === 'mobility' ? '机动' : '特殊'}</div>
+                        <div class="pick-card-effect">${card.desc}</div>
+                    </div>
+                </div>
+            `;
+        });
+        // 跳过按钮（保持牌库纯净度的策略选择）
+        container.innerHTML += `
+            <div class="pick-card" style="opacity:0.7;border-style:dashed;" onclick="skipCardPick()">
+                <div class="pick-card-icon">🚫</div>
+                <div class="pick-card-info">
+                    <div class="pick-card-name">跳过</div>
+                    <div class="pick-card-effect">不拿牌，保持牌组纯净</div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('cardPick').style.display = 'flex';
+    }
+
+    function skipCardPick() {
+        document.getElementById('cardPick').style.display = 'none';
+        showFB('跳过选卡，保持牌组纯净', 'info');
+        startNextChapter();
+    }
+
+    function pickCard(id) {
+        G.permanent.unlockedCards = [...(G.permanent.unlockedCards || []), id];
+        saveData();
+        document.getElementById('cardPick').style.display = 'none';
+        const card = ALL_CARDS[id];
+        showFB(`获得「${card.name}」！永久解锁`, 'success');
+        // 通过startNextChapter将新卡加入手牌（不再重复push到deck）
+        startNextChapter(id);
+    }
+
+    function startNextChapter(newCardId) {
+        G.wave = 1;
+        G.turn = 1;
+        G.energy = CLASSES[G.player.class].energy; // 重置为职业初始能量
+        resetBattleState();
+        // 收集所有卡牌ID，统一转为对象重建牌组
+        const allIds = [
+            ...G.deck.map(c => typeof c === 'string' ? c : c.id),
+            ...G.hand.map(c => c.id),
+            ...G.discard
+        ];
+        // 如果有新卡且不在当前牌组中，加入牌组
+        if (newCardId && !allIds.includes(newCardId)) {
+            allIds.push(newCardId);
+        }
+        G.deck = allIds.filter(id => ALL_CARDS[id]).map(id => ({...ALL_CARDS[id]}));
+        G.hand = []; G.discard = [];
+        shuffle(G.deck);
+        drawCards(5);
+        spawnEnemies();
+        renderAll();
+        showWaveBanner(`章节 ${G.chapter}`);
+        if (Math.random() < 0.4) setTimeout(() => triggerEvent(), 500);
+    }
+
+    function endRun(victory) {
+        if (victory) {
+            G.permanent.wins++;
+        }
+        saveData();
+        showModal(victory ? '🏆' : '💀', victory ? '通关成功！' : '阵亡', `「${G.player.name}」倒下...\n💰 银两：${G.gold}`, [
+            { name: '再来一局', effect: () => { hideModal(); showScreen('screenMain'); updateMain(); }}
+        ]);
+    }
+
+    // ==================== 事件 ====================
+    function triggerEvent() {
+        const ev = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+        showModal(ev.icon, ev.title, ev.desc, ev.choices);
+    }
+
+    function showModal(icon, title, desc, choices) {
+        document.getElementById('mIcon').textContent = icon;
+        document.getElementById('mTitle').textContent = title;
+        document.getElementById('mDesc').textContent = desc;
+        const cEl = document.getElementById('mChoices');
+        cEl.innerHTML = '';
+        choices.forEach(c => {
+            const btn = document.createElement('div');
+            btn.className = 'choice-btn';
+            btn.innerHTML = `
+                <div class="choice-name">${c.name}</div>
+                <div class="choice-desc">${c.desc || ''}</div>
+                ${c.cost ? `<div class="choice-cost">${c.cost > 0 ? `消耗 ${c.cost} 银两` : `消耗 ${Math.abs(c.cost)} 银两 + 奖励`}</div>` : ''}
+            `;
+            btn.onclick = () => {
+                if (c.cost > 0 && G.gold < c.cost) { showFB('银两不足！', 'fail'); return; }
+                c.effect(G);
+                hideModal();
+                renderAll();
+            };
+            cEl.appendChild(btn);
+        });
+        document.getElementById('modal').style.display = 'flex';
+    }
+
+    function hideModal() { document.getElementById('modal').style.display = 'none'; }
+
+    function showWaveBanner(text) {
+        const b = document.createElement('div');
+        b.className = 'wave-banner';
+        b.textContent = text;
+        document.body.appendChild(b);
+        setTimeout(() => b.remove(), 1500);
+    }
+
+    function showFB(text, type) {
+        const el = document.getElementById('feedback');
+        el.innerHTML = `<div class="fb-text ${type}">${text}</div>`;
+        setTimeout(() => { if (el) el.innerHTML = ''; }, 2200);
+    }
+
+    // ==================== 启动 ====================
+    initGame();
+    loadData();
+    updateMain();
+    showClassSelect();
+    </script>
+</body>
+</html>
+
+
+
