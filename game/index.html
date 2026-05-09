@@ -328,9 +328,9 @@
 
         // ===== 武僧基础 =====
         monk_basic_1: { id: 'monk_basic_1', name: '铁山靠', icon: '🛡️', type: 'defense', cost: 1, rarity: 'basic', desc: '10格挡；下回合攻击+5', effect: 'block_atk', blockValue: 10, atkBonus: 5, class: 'monk' },
-        monk_basic_2: { id: 'monk_basic_2', name: '金刚拳', icon: '👊', type: 'attack', cost: 2, rarity: 'basic', desc: '16伤害；获得5点反伤值', effect: 'damage_thorns', value: 16, thorns: 5, class: 'monk' },
-        monk_basic_3: { id: 'monk_basic_3', name: '反伤震', icon: '⚡', type: 'special', cost: 1, rarity: 'basic', desc: '获得【反震】：受击时返还100%伤害', effect: 'counter_reflect', value: 1.0, class: 'monk' },
-        monk_basic_4: { id: 'monk_basic_4', name: '醉拳闪', icon: '�', type: 'mobility', cost: 1, rarity: 'basic', desc: '50%闪避；成功后抽2张牌', effect: 'evade_draw', evadePct: 0.5, drawCount: 2, class: 'monk' },
+        monk_basic_2: { id: 'monk_basic_2', name: '伏魔拳', icon: '👊', type: 'attack', cost: 2, rarity: 'basic', desc: '10伤害；若敌方意图攻击，额外15破招伤害+施加虚弱', effect: 'damage_counter_strike', value: 10, bonusDmg: 15, class: 'monk' },
+        monk_basic_3: { id: 'monk_basic_3', name: '铁山靠·极', icon: '💪', type: 'attack', cost: 2, rarity: 'basic', desc: '消耗所有护甲，造成护甲值1.5倍的伤害', effect: 'armor_crush', mult: 1.5, class: 'monk' },
+        monk_basic_4: { id: 'monk_basic_4', name: '醉拳闪', icon: '🍶', type: 'mobility', cost: 1, rarity: 'basic', desc: '获得1次闪避；若成功闪避，下张攻击牌费用为0', effect: 'evade_free_attack', class: 'monk' },
         monk_basic_5: { id: 'monk_basic_5', name: '无相转', icon: '�', type: 'defense', cost: 2, rarity: 'basic', desc: '抵消下次伤害并转移给敌人【保留】', effect: 'absorb_redirect', retain: true, class: 'monk' },
 
         // ===== 武僧解锁 =====
@@ -346,7 +346,7 @@
         // ===== 萨满基础 =====
         shaman_basic_1: { id: 'shaman_basic_1', name: '化血掌', icon: '👋', type: 'attack', cost: 1, rarity: 'basic', desc: '12伤害；回复5点生命', effect: 'damage_heal', value: 12, heal: 5, class: 'shaman' },
         shaman_basic_2: { id: 'shaman_basic_2', name: '噬魂击', icon: '💜', type: 'attack', cost: 2, rarity: 'basic', desc: '消耗10%生命，造成25伤害；若击杀回复20%生命', effect: 'damage_kill_heal', value: 25, hpCostPct: 0.10, healPct: 0.2, class: 'shaman' },
-        shaman_basic_3: { id: 'shaman_basic_3', name: '聚血咒', icon: '💚', type: 'special', cost: 2, rarity: 'basic', desc: '回复20点生命', effect: 'heal', value: 20, class: 'shaman' },
+        shaman_basic_3: { id: 'shaman_basic_3', name: '饮血阵', icon: '💚', type: 'special', cost: 1, rarity: 'basic', desc: '本回合所有伤害的50%转化为治疗', effect: 'lifesteal_this_turn', lifesteal: 0.5, class: 'shaman' },
         shaman_basic_4: { id: 'shaman_basic_4', name: '白骨甲', icon: '�', type: 'defense', cost: 2, rarity: 'basic', desc: '获得30点护盾', effect: 'shield', value: 30, hpCostPct: 0.05, class: 'shaman' },
         shaman_basic_5: { id: 'shaman_basic_5', name: '血祭', icon: '🩸', type: 'special', cost: 0, rarity: 'basic', desc: '消耗8点生命，获得2点能量并抽1张牌', effect: 'blood_sacrifice_engine', hpCost: 8, energyGain: 2, class: 'shaman' },
 
@@ -354,7 +354,7 @@
         shaman_unlock_1: { id: 'shaman_unlock_1', name: '燃血', icon: '🔥', type: 'special', cost: 0, rarity: 'rare', desc: '消耗10血，本回合攻击力+15', effect: 'sacrifice_buff_atk', hpCost: 10, value: 15, class: 'shaman' },
         shaman_unlock_2: { id: 'shaman_unlock_2', name: '血爆', icon: '💥', type: 'attack', cost: 3, rarity: 'rare', desc: '造成已损失生命值200%的全场伤害【消耗】', effect: 'sacrifice_lost_hp_aoe', hpCostPct: 0.30, mult: 2.0, exhaust: true, class: 'shaman' },
         shaman_unlock_3: { id: 'shaman_unlock_3', name: '骨刺', icon: '🌹', type: 'defense', cost: 2, rarity: 'rare', desc: '20护盾；敌人攻击护盾受20点反伤', effect: 'thorns_shield', shield: 20, thorns: 20, class: 'shaman' },
-        shaman_unlock_4: { id: 'shaman_unlock_4', name: '煞斩', icon: '⚔️', type: 'attack', cost: 2, rarity: 'rare', desc: '18伤害；自身每有10%残血伤害+5', effect: 'damage_lowhp_scale', value: 18, perTenPct: 5, class: 'shaman' },
+        shaman_unlock_4: { id: 'shaman_unlock_4', name: '煞斩', icon: '⚔️', type: 'attack', cost: 2, rarity: 'rare', desc: '25伤害；每损失10%血量额外+8伤害（30%血线以下翻倍）', effect: 'damage_lowhp_scale', value: 25, perTenPct: 8, class: 'shaman' },
         shaman_unlock_5: { id: 'shaman_unlock_5', name: '血噬', icon: '🩸', type: 'attack', cost: 2, rarity: 'epic', desc: '全场40伤害；并施加【重伤】', effect: 'sacrifice_aoe_wound', value: 40, hpCostPct: 0.20, class: 'shaman' },
         shaman_unlock_6: { id: 'shaman_unlock_6', name: '爆甲', icon: '🛡️', type: 'defense', cost: 3, rarity: 'epic', desc: '获得50护盾；盾碎时对全场造成等量伤害', effect: 'shield_explode', shield: 50, class: 'shaman' },
         shaman_unlock_7: { id: 'shaman_unlock_7', name: '嗜血咒', icon: '🧛', type: 'special', cost: 4, rarity: 'legend', desc: '5回合内，所有伤害的50%转化为治疗', effect: 'blood_demon_lifesteal', turns: 5, lifesteal: 0.5, class: 'shaman' },
@@ -633,6 +633,8 @@
         G.hurtThisTurn = false; G.dodgedThisTurn = false;
         G.comboCount = 0; G.lastCardType = null;
         G.evadeDrawPending = null; G.evadeGrantStealth = false;
+        G.lifestealThisTurn = 0;
+        G.freeAttackOnDodge = false; G.freeNextAttack = false;
     }
 
     // ==================== 战斗系统 ====================
@@ -715,6 +717,7 @@
             if (e.poison > 0) debuffs.push(`☠️${e.poison}`);
             if (e.marked) debuffs.push('💀标记');
             if (e.wounded) debuffs.push('🩸重伤');
+            if (e.weakened > 0) debuffs.push(`💫虚弱${e.weakened}`);
             const debuff = debuffs.join(' ');
             list.innerHTML += `
                 <div class="enemy-card ${dead ? 'dead' : ''} ${targeted ? 'targeted' : ''}" onclick="selectEnemy(${i})">
@@ -722,7 +725,7 @@
                     <div class="enemy-icon">${e.icon}</div>
                     <div class="enemy-info">
                         <div class="enemy-name">${e.name}</div>
-                        <div class="enemy-status">⚔️${e.atk} 🛡️${e.def}</div>
+                        <div class="enemy-status">⚔️${e.atk} 🛡️${e.def} ${e.intent === 'attack' ? '🔴意图:攻击' : '🔵意图:防御'}</div>
                         <div class="hp-bar-bg">
                             <div class="hp-bar-fill" style="width:${Math.max(0, e.hp/e.maxHp*100)}%"></div>
                         </div>
@@ -743,6 +746,9 @@
         if (G.thorns > 0) buffs.push(`<span class="buff-tag special">荆棘${G.thorns}</span>`);
         if (G.counterReflect > 0) buffs.push(`<span class="buff-tag special">反震</span>`);
         if (G.absorbRedirect) buffs.push(`<span class="buff-tag special">无相转</span>`);
+        if (G.lifestealThisTurn > 0) buffs.push(`<span class="buff-tag special">饮血50%</span>`);
+        if (G.freeNextAttack) buffs.push(`<span class="buff-tag buff">下张攻击免费</span>`);
+        if (G.freeAttackOnDodge) buffs.push(`<span class="buff-tag buff">闪避触发免费</span>`);
         if (G.autoCounter > 0) buffs.push(`<span class="buff-tag special">反击${G.autoCounter}×${G.autoCounterTurns}回合</span>`);
         if (G.nextAttackBuff > 0) buffs.push(`<span class="buff-tag buff">蓄力+${Math.floor(G.nextAttackBuff*100)}%</span>`);
         if (G.stackAtk > 0) buffs.push(`<span class="buff-tag buff">剑意+${G.stackAtk}</span>`);
@@ -841,14 +847,25 @@
     function playCard() {
         if (G.selectedCard === null) return;
         const card = G.hand[G.selectedCard];
-        // 血祭免费判定
-        const effectiveCost = (G.freeEpicLegend && (card.rarity === 'epic' || card.rarity === 'legend')) ? 0 : card.cost;
+        // 免费判定：血祭免费 或 醉拳闪触发（攻击牌免费）
+        let effectiveCost = card.cost;
+        if (G.freeEpicLegend && (card.rarity === 'epic' || card.rarity === 'legend')) {
+            effectiveCost = 0;
+        }
+        if (G.freeNextAttack && card.type === 'attack') {
+            effectiveCost = 0;
+        }
         if (G.energy < effectiveCost) { showFB('气力不足！', 'fail'); return; }
 
         G.energy -= effectiveCost;
         if (effectiveCost === 0 && card.cost > 0) {
-            G.freeEpicLegend = false; // 使用一次后重置
-            showFB('血祭免费！', 'special');
+            if (G.freeNextAttack && card.type === 'attack') {
+                G.freeNextAttack = false;
+                showFB('醉拳闪触发！免费出牌！', 'special');
+            } else {
+                G.freeEpicLegend = false;
+                showFB('血祭免费！', 'special');
+            }
         }
         G.hand.splice(G.selectedCard, 1);
         G.selectedCard = null;
@@ -1147,23 +1164,40 @@
                 showFB(`格挡+${card.blockValue || 10}！下回合攻击+${card.atkBonus || 5}`, 'info');
                 break;
 
-            // 金刚拳：伤害+反伤值
-            case 'damage_thorns':
-                if (enemy) dealDamage(enemy, Math.floor(card.value * nextAtkMult));
-                G.thorns += (card.thorns || 5);
-                showFB(`反伤值+${card.thorns || 5}！`, 'info');
+            // 伏魔拳：若敌方意图攻击则破招
+            case 'damage_counter_strike':
+                if (enemy) {
+                    let dmg = Math.floor(card.value * nextAtkMult);
+                    dealDamage(enemy, dmg);
+                    // 检测敌方意图是否为攻击
+                    if (enemy.intent && (enemy.intent === 'attack' || enemy.intent === 'heavy')) {
+                        dealDamage(enemy, card.bonusDmg || 15);
+                        enemy.weakened = (enemy.weakened || 0) + 2;
+                        showFB(`破招！额外${card.bonusDmg || 15}伤害+虚弱2回合！`, 'special');
+                    }
+                }
                 break;
 
-            // 反伤震：受击返还100%
-            case 'counter_reflect':
-                G.counterReflect = (card.value || 1.0);
-                showFB('反震！受击返还100%伤害', 'special');
+            // 铁山靠·极：消耗护甲造成1.5倍伤害
+            case 'armor_crush':
+                if (enemy) {
+                    const armorVal = G.block || 0;
+                    const crushDmg = Math.floor(armorVal * (card.mult || 1.5));
+                    G.block = 0;
+                    if (crushDmg > 0) {
+                        dealDamage(enemy, crushDmg);
+                        showFB(`铁山靠·极！${armorVal}护甲转化为${crushDmg}伤害！`, 'special');
+                    } else {
+                        showFB('没有护甲可转化！', 'info');
+                    }
+                }
                 break;
 
-            // 醉拳闪：50%闪避成功抽牌
-            case 'evade_draw':
-                G.evadeDrawPending = { evadePct: card.evadePct || 0.5, drawCount: card.drawCount || 2 };
-                showFB(`醉拳闪！50%闪避，成功抽${card.drawCount || 2}张`, 'info');
+            // 醉拳闪：闪避+下张攻击免费
+            case 'evade_free_attack':
+                G.absoluteEvade = (G.absoluteEvade || 0) + 1;
+                G.freeAttackOnDodge = true;
+                showFB('醉拳闪！获得1次闪避，闪避后下张攻击免费', 'info');
                 break;
 
             // 无相转：抵消下次伤害并反弹
@@ -1285,6 +1319,12 @@
                 showFB(`护盾+${card.value || 30}！`, 'info');
                 break;
 
+            // 饮血阵：本回合伤害50%转治疗
+            case 'lifesteal_this_turn':
+                G.lifestealThisTurn = (card.lifesteal || 0.5);
+                showFB('饮血阵！本回合伤害50%转治疗', 'special');
+                break;
+
             // 血祭：消耗生命换能量+抽牌（萨满核心发动机）
             case 'blood_sacrifice_engine':
                 G.player.hp -= (card.hpCost || 8);
@@ -1326,13 +1366,17 @@
                 showFB(`荆棘护盾！${card.shield}盾+${card.thorns}反伤`, 'special');
                 break;
 
-            // 圣光剑：残血加成
+            // 煞斩：残血加成，30%血线以下翻倍
             case 'damage_lowhp_scale':
                 if (enemy) {
-                    const missingPct = Math.floor((1 - G.player.hp / G.player.maxHp) * 10);
-                    const bonusDmg = missingPct * (card.perTenPct || 5);
-                    dealDamage(enemy, Math.floor((card.value + bonusDmg) * nextAtkMult));
-                    if (bonusDmg > 0) showFB(`残血加成+${bonusDmg}伤害！`, 'info');
+                    const hpRatio = G.player.hp / G.player.maxHp;
+                    const missingPct = Math.floor((1 - hpRatio) * 10);
+                    let bonusDmg = missingPct * (card.perTenPct || 8);
+                    // 30%血线以下，加成翻倍
+                    if (hpRatio <= 0.3) bonusDmg *= 2;
+                    const totalDmg = Math.floor((card.value + bonusDmg) * nextAtkMult);
+                    dealDamage(enemy, totalDmg);
+                    if (bonusDmg > 0) showFB(`残血爆发！+${bonusDmg}伤害${hpRatio <= 0.3 ? '（翻倍！）' : ''}`, 'special');
                 }
                 break;
 
@@ -1418,9 +1462,14 @@
 
         enemy.hp -= dmg;
 
-        // 吸血（血魔大法）
+        // 吸血（血魔大法 - 持续回合）
         if (G.lifestealTurns > 0 && G.lifestealPct > 0) {
             const ls = Math.floor(dmg * G.lifestealPct);
+            G.player.hp = Math.min(G.player.maxHp, G.player.hp + ls);
+        }
+        // 饮血阵（本回合吸血）
+        if (G.lifestealThisTurn > 0) {
+            const ls = Math.floor(dmg * G.lifestealThisTurn);
             G.player.hp = Math.min(G.player.maxHp, G.player.hp + ls);
         }
 
@@ -1500,6 +1549,9 @@
         G.dodgedThisTurn = false;
         G.comboCount = 0;
         G.evadeGrantStealth = false;
+        G.lifestealThisTurn = 0;
+        G.freeAttackOnDodge = false;
+        G.freeNextAttack = false;
 
         // 闪避回合递减
         if (G.evadeBuffTurns > 0) {
@@ -1564,6 +1616,12 @@
                     G.stealth = (G.stealth || 0) + 1;
                     showFB('闪避成功！获得1层潜行', 'info');
                 }
+                // 醉拳闪：闪避成功下张攻击免费
+                if (G.freeAttackOnDodge) {
+                    G.freeNextAttack = true;
+                    G.freeAttackOnDodge = false;
+                    showFB('醉拳闪触发！下张攻击牌免费！', 'special');
+                }
                 return;
             }
 
@@ -1572,11 +1630,11 @@
             if (Math.random() < totalEvade) {
                 showFB(`闪避${e.name}攻击！`, 'success');
                 G.dodgedThisTurn = true;
-                // 醉拳闪抽牌
-                if (G.evadeDrawPending) {
-                    drawCards(G.evadeDrawPending.drawCount || 2);
-                    showFB(`闪避成功！抽${G.evadeDrawPending.drawCount}张`, 'success');
-                    G.evadeDrawPending = null;
+                // 醉拳闪：闪避成功下张攻击免费
+                if (G.freeAttackOnDodge) {
+                    G.freeNextAttack = true;
+                    G.freeAttackOnDodge = false;
+                    showFB('醉拳闪触发！下张攻击牌免费！', 'special');
                 }
                 return;
             }
@@ -1600,6 +1658,12 @@
             }
 
             let dmg = Math.floor(e.atk * (1 - G.player.def / (G.player.def + 30)));
+
+            // 虚弱减伤（虚弱敌人伤害-30%）
+            if (e.weakened && e.weakened > 0) {
+                dmg = Math.floor(dmg * 0.7);
+                e.weakened--;
+            }
 
             // 格挡
             if (G.block > 0) {
@@ -1674,6 +1738,11 @@
 
         // ========== 新回合开始 ==========
         G.turn++;
+
+        // 敌人意图刷新（每回合开始随机决定：70%攻击/30%防御）
+        G.enemies.filter(e => e.hp > 0).forEach(e => {
+            e.intent = Math.random() < 0.7 ? 'attack' : 'defend';
+        });
 
         // 能量惩罚（金刚不坏后遗症）
         if (G.energyPenaltyNextTurn) {
