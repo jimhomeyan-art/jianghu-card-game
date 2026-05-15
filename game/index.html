@@ -749,7 +749,7 @@
     // ==================== 卡牌数据 ====================
     const ALL_CARDS = {
         // ===== 剑侠基础 =====
-        sword_basic_1: { id: 'sword_basic_1', name: '上挑', icon: '↗️', type: 'attack', cost: 1, rarity: 'basic', desc: '8伤害；[连招]：抽1张牌', effect: 'sword_shangtiao', value: 8, class: 'sword' },
+        sword_basic_1: { id: 'sword_basic_1', name: '上挑', icon: '↗️', type: 'attack', cost: 0, rarity: 'basic', desc: '8伤害；抽1张牌，回1点能量', effect: 'sword_shangtiao', value: 8, class: 'sword' },
         sword_basic_2: { id: 'sword_basic_2', name: '重击', icon: '🔪', type: 'attack', cost: 2, rarity: 'basic', desc: '造成18点伤害', effect: 'damage', value: 18, class: 'sword' },
         sword_basic_3: { id: 'sword_basic_3', name: '连斩', icon: '💫', type: 'attack', cost: 2, rarity: 'basic', desc: '6伤害×3次', effect: 'damage_multi', value: 6, hits: 3, class: 'sword' },
         sword_basic_4: { id: 'sword_basic_4', name: '破甲', icon: '⛰️', type: 'attack', cost: 2, rarity: 'basic', desc: '15伤害，忽视25%防御', effect: 'damage_armor_ignore', value: 15, ignorePct: 0.25, class: 'sword' },
@@ -1577,13 +1577,12 @@
                 break;
 
             // ==================== 剑侠 ====================
-            // 上挑：8伤害；[连招]：本回合非首张牌则抽1张
+            // 上挑：0费，8伤害，抽1张牌，回1能量
             case 'sword_shangtiao':
                 if (enemy) dealDamage(enemy, Math.floor(card.value * nextAtkMult));
-                if (G.comboCount > 1) {
-                    drawCards(1);
-                    showFB(`[连招×${G.comboCount}] 抽1张牌！`, 'success');
-                }
+                drawCards(1);
+                G.energy = Math.min(G.maxEnergy, G.energy + 1);
+                showFB('上挑！抽1牌+1能量', 'success');
                 break;
 
             // 连环剑：8伤害；[连招]：本回合非首张牌则回1点能量
