@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>江湖残卷 - 武学招式系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        :root {
+            --ink-green: #3D5A3D; --blood-red: #C41E3A;
+            --night-black: #1A1A1A; --paper-bg: #2D2D2D; --gold: #D4AF37;
+            --purple: #9B59B6; --cyan: #3498DB; --orange: #E67E22;
+        }
+        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--night-black); color: #E8E8E8; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+        .screen { display: none; width: 100%; max-width: 420px; min-height: 100vh; }
+        .screen.active { display: flex; flex-direction: column; }
+
+        /* 主界面 */
+        .header { text-align: center; padding: 24px 20px; background: linear-gradient(180deg, #2A2A2A, transparent); }
+        .title { font-size: 24px; color: var(--gold); letter-spacing: 2px; }
+        .subtitle { font-size: 11px; color: #666; margin-top: 4px; }
+        .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; padding: 12px 16px; }
+        .stat { text-align: center; padding: 8px; background: var(--paper-bg); border-radius: 8px; }
+        .stat-val { font-size: 16px; color: var(--gold); }
+        .stat-label { font-size: 9px; color: #666; }
+
+        /* 碎片展示 */
+        .frag-section { padding: 12px 16px; }
+        .frag-title { font-size: 12px; color: #666; margin-bottom: 8px; }
+        .frag-list { display: flex; gap: 6px; flex-wrap: wrap; }
+        .frag-tag { padding: 4px 8px; background: var(--paper-bg); border: 1px solid var(--gold); border-radius: 12px; font-size: 10px; }
+        .frag-tag.xu { border-color: #9B59B6; color: #DDA0DD; }
+        .frag-tag.shi { border-color: #E67E22; color: #F39C12; }
+        .frag-tag.jia { border-color: #3498DB; color: #87CEEB; }
+        .no-frag { color: #555; font-size: 12px; padding: 12px; text-align: center; }
+
+        /* 经脉展示 */
+        .meridian-section { padding: 10px 16px; background: rgba(155,89,182,0.1); border-top: 1px solid #333; border-bottom: 1px solid #333; }
+        .mer-title { font-size: 11px; color: var(--purple); margin-bottom: 6px; display: flex; justify-content: space-between; }
+        .meridian-dots { display: flex; gap: 8px; justify-content: center; }
+        .mer-dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #444; display: flex; align-items: center; justify-content: center; font-size: 12px; background: #222; cursor: pointer; transition: all 0.2s; }
+        .mer-dot.unlocked { border-color: var(--purple); background: rgba(155,89,182,0.3); color: #DDA0DD; }
+        .mer-dot.active { animation: merPulse 1s infinite; }
+        @keyframes merPulse { 0%,100% { box-shadow: 0 0 5px var(--purple); } 50% { box-shadow: 0 0 15px var(--purple); } }
+        .mer-bonus { font-size: 10px; color: #888; text-align: center; padding: 4px; }
+
+        .action-bar { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+        .btn { padding: 16px; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; border: none; }
+        .btn-start { background: linear-gradient(135deg, var(--ink-green), #2D4A2D); color: white; }
+        .btn-reset { background: #333; color: #666; font-size: 11px; }
+
+        /* 角色选择 */
+        .char-select { padding: 16px; flex: 1; }
+        .char-title { font-size: 14px; color: var(--gold); text-align: center; margin-bottom: 12px; }
+        .char-list { display: flex; flex-direction: column; gap: 10px; }
+        .char-card { display: flex; gap: 12px; padding: 14px; background: var(--paper-bg); border: 2px solid #333; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+        .char-card:hover { border-color: var(--ink-green); transform: translateX(4px); }
+        .char-card.sel { border-color: var(--gold); background: rgba(212,175,55,0.1); }
+        .char-card.sel::before { content: '✓ '; color: var(--gold); }
+        .char-avatar { font-size: 36px; }
+        .char-name { font-size: 15px; color: var(--gold); }
+        .char-type { font-size: 11px; color: #666; }
+        .char-stats { font-size: 10px; color: #888; margin-top: 4px; }
+        .start-btn { margin: 16px; padding: 16px; background: var(--gold); color: #1A1A1A; border: none; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .back-btn { padding: 10px; margin: 0 16px; background: #333; color: #666; border: none; border-radius: 8px; cursor: pointer; }
+
+        /* 战斗界面 */
+        .battle-header { display: flex; justify-content: space-around; padding: 10px 16px; background: var(--paper-bg); }
+        .res { display: flex; align-items: center; gap: 5px; font-size: 14px; }
+        .res-val { color: var(--gold); font-weight: bold; }
+
+        .battle-area { flex: 1; padding: 12px 16px; display: flex; flex-direction: column; }
+
+        /* 克制指示器 */
+        .counter-indicator { display: flex; justify-content: center; gap: 16px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 8px; margin-bottom: 10px; }
+        .counter-item { font-size: 11px; padding: 4px 10px; border-radius: 12px; border: 1px solid #444; }
+        .counter-item.xu { color: #DDA0DD; border-color: #9B59B6; }
+        .counter-item.shi { color: #F39C12; border-color: #E67E22; }
+        .counter-item.jia { color: #87CEEB; border-color: #3498DB; }
+        .counter-item.winner { background: rgba(0,0,0,0.5); }
+
+        .section-label { font-size: 11px; color: #555; margin-bottom: 6px; }
+
+        .grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
+        .cell { aspect-ratio: 1; background: rgba(255,255,255,0.03); border: 2px solid #333; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .cell.target { border-color: var(--blood-red); background: rgba(196,30,58,0.2); cursor: pointer; animation: blink 0.8s infinite; }
+        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .cell.target:hover { transform: scale(1.05); }
+        .cell.sel { border-color: var(--ink-green); background: rgba(61,90,61,0.3); }
+        .cell.empty { opacity: 0.15; }
+        .char-icon { font-size: 28px; }
+        .char-name { font-size: 10px; color: #AAA; }
+        .hp-bar { position: absolute; bottom: 3px; left: 3px; right: 3px; height: 3px; background: #333; border-radius: 2px; }
+        .hp-fill { height: 100%; background: linear-gradient(90deg, var(--blood-red), #FF6B6B); transition: width 0.3s; }
+        .qi-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), #87CEEB); }
+        .qi-bar { position: absolute; bottom: 8px; left: 3px; right: 3px; height: 2px; background: #222; }
+        .enemy-qi { position: absolute; top: 3px; right: 3px; font-size: 8px; color: var(--cyan); }
+
+        /* 招式预览 */
+        .combo-section { padding: 10px 16px; background: var(--paper-bg); }
+        .combo-title { font-size: 11px; color: var(--gold); margin-bottom: 8px; }
+        .combo-slots { display: flex; gap: 6px; align-items: center; justify-content: center; }
+        .combo-slot {
+            width: 70px; height: 60px; border: 2px dashed #444; border-radius: 10px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s; position: relative; background: rgba(0,0,0,0.2);
+        }
+        .combo-slot:hover { border-color: var(--gold); }
+        .combo-slot.filled { border-style: solid; }
+        .combo-slot.xu { border-color: #9B59B6; background: rgba(155,89,182,0.15); }
+        .combo-slot.shi { border-color: #E67E22; background: rgba(230,126,34,0.15); }
+        .combo-slot.jia { border-color: #3498DB; background: rgba(52,152,219,0.15); }
+        .combo-arrow { font-size: 14px; color: #555; }
+        .slot-label { font-size: 8px; color: #555; }
+        .slot-name { font-size: 10px; color: #CCC; margin-top: 2px; text-align: center; }
+        .slot-icon { font-size: 18px; }
+
+        /* 动作预览 */
+        .action-preview { padding: 6px 16px; min-height: 36px; display: flex; align-items: center; justify-content: center; }
+        .preview-text { font-size: 12px; padding: 6px 14px; border-radius: 16px; }
+        .preview-text.can { background: rgba(61,90,61,0.4); color: #6BFF6B; border: 1px solid var(--ink-green); }
+        .preview-text.no { background: rgba(196,30,58,0.3); color: #FF6B6B; border: 1px solid var(--blood-red); }
+        .preview-text.qi-ok { background: rgba(52,152,219,0.3); color: #87CEEB; border: 1px solid var(--cyan); }
+        .preview-text.counter { background: rgba(155,89,182,0.3); color: #DDA0DD; border: 1px solid var(--purple); }
+
+        /* 招式选择弹窗 */
+        .move-picker { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: flex; flex-direction: column; }
+        .picker-header { padding: 16px; background: var(--paper-bg); display: flex; justify-content: space-between; align-items: center; }
+        .picker-title { font-size: 14px; color: var(--gold); }
+        .picker-close { background: #444; color: #CCC; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        .picker-slots { display: flex; justify-content: center; gap: 6px; padding: 12px; background: rgba(0,0,0,0.3); }
+        .picker-slot-indicator { width: 50px; height: 44px; border: 2px dashed #444; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .picker-slot-indicator.filled { border-style: solid; }
+        .picker-body { flex: 1; padding: 12px; overflow-y: auto; }
+        .move-group { margin-bottom: 16px; }
+        .move-group-title { font-size: 11px; color: #666; margin-bottom: 6px; padding-left: 4px; }
+        .move-group-title.xu { color: #DDA0DD; border-left: 3px solid #9B59B6; }
+        .move-group-title.shi { color: #F39C12; border-left: 3px solid #E67E22; }
+        .move-group-title.jia { color: #87CEEB; border-left: 3px solid #3498DB; }
+        .move-list { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+        .move-card {
+            padding: 10px 6px; background: var(--paper-bg); border: 1px solid #333;
+            border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.2s;
+        }
+        .move-card:hover { transform: translateY(-2px); }
+        .move-card.xu { border-color: #9B59B6; }
+        .move-card.shi { border-color: #E67E22; }
+        .move-card.jia { border-color: #3498DB; }
+        .move-card.owned { opacity: 1; }
+        .move-card.locked { opacity: 0.3; cursor: not-allowed; }
+        .move-card.selected { background: rgba(212,175,55,0.2); border-color: var(--gold); }
+        .move-icon { font-size: 20px; }
+        .move-name { font-size: 10px; color: #CCC; margin-top: 4px; }
+        .move-type { font-size: 9px; color: #666; }
+        .move-dmg { font-size: 9px; color: var(--blood-red); margin-top: 2px; }
+        .move-cost { font-size: 8px; color: var(--cyan); }
+
+        /* 技能/经脉面板 */
+        .bottom-panels { padding: 8px 16px; background: var(--paper-bg); display: flex; gap: 8px; }
+        .panel { flex: 1; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 8px; }
+        .panel-title { font-size: 10px; color: #666; margin-bottom: 4px; }
+        .panel-content { font-size: 11px; color: #AAA; }
+
+        /* 操作栏 */
+        .action-row { display: flex; gap: 8px; padding: 10px 16px 16px; }
+        .btn-row { flex: 1; padding: 14px; border-radius: 10px; font-size: 13px; font-weight: bold; cursor: pointer; border: none; transition: all 0.15s; }
+        .btn-row:active { transform: scale(0.95); }
+        .btn-execute { background: linear-gradient(135deg, var(--blood-red), #8B0000); color: white; }
+        .btn-execute:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-pill { background: var(--ink-green); color: white; position: relative; }
+        .pill-badge { position: absolute; top: 3px; right: 3px; background: var(--gold); color: #1A1A1A; font-size: 9px; padding: 1px 5px; border-radius: 8px; }
+        .btn-end { background: #444; color: #CCC; }
+
+        /* 反馈 */
+        .feedback { padding: 6px 16px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
+        .fb-text { font-size: 13px; padding: 5px 12px; border-radius: 16px; animation: fbPop 0.3s; }
+        @keyframes fbPop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .fb-text.success { background: rgba(61,90,61,0.5); color: #6BFF6B; border: 1px solid var(--ink-green); }
+        .fb-text.fail { background: rgba(196,30,58,0.5); color: #FF6B6B; border: 1px solid var(--blood-red); }
+        .fb-text.info { background: rgba(212,175,55,0.3); color: var(--gold); border: 1px solid var(--gold); }
+        .fb-text.counter-win { background: rgba(155,89,182,0.5); color: #DDA0DD; border: 1px solid var(--purple); }
+        .fb-text.counter-lose { background: rgba(230,126,34,0.5); color: #F39C12; border: 1px solid var(--orange); }
+
+        /* 飘字 */
+        .dmg-pop { position: absolute; font-size: 22px; font-weight: bold; pointer-events: none; animation: floatUp 0.8s forwards; z-index: 200; }
+        .dmg-pop.dmg { color: #FF4444; }
+        .dmg-pop.crit { color: #FFD700; font-size: 28px; }
+        .dmg-pop.heal { color: #44FF44; }
+        .dmg-pop.miss { color: #888; font-size: 16px; }
+        .dmg-pop.counter-win { color: #DDA0DD; font-size: 26px; }
+        .dmg-pop.counter-lose { color: #F39C12; font-size: 18px; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1.2); } 100% { opacity: 0; transform: translateY(-50px) scale(0.8); } }
+
+        /* 日志 */
+        .log { padding: 0 16px; max-height: 70px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 6px; margin: 0 16px; }
+        .log-item { font-size: 10px; color: #666; margin-bottom: 2px; padding: 2px 8px; border-left: 2px solid #333; }
+        .log-item.dmg { border-color: var(--blood-red); color: #FF6B6B; }
+        .log-item.heal { border-color: #27AE60; color: #6BFF6B; }
+        .log-item.info { border-color: var(--gold); color: #FFE066; }
+        .log-item.relic { border-color: var(--purple); color: #DDA0DD; }
+        .log-item.reward { border-color: var(--gold); color: #FFD700; }
+        .log-item.counter { border-color: var(--purple); color: #DDA0DD; }
+        .log-item.combo { border-color: var(--cyan); color: #87CEEB; }
+
+        /* 弹窗 */
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: var(--paper-bg); border: 2px solid var(--gold); border-radius: 16px; padding: 24px; max-width: 360px; width: 92%; }
+        .modal-icon { text-align: center; font-size: 52px; margin-bottom: 12px; }
+        .modal-title { text-align: center; font-size: 18px; color: var(--gold); margin-bottom: 8px; }
+        .modal-desc { text-align: center; font-size: 13px; color: #AAA; line-height: 1.6; margin-bottom: 18px; }
+        .modal-choices { display: flex; flex-direction: column; gap: 8px; }
+        .choice-btn { padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid #444; background: rgba(255,255,255,0.05); text-align: left; transition: all 0.2s; }
+        .choice-btn:hover { border-color: var(--gold); transform: translateX(4px); }
+        .choice-name { color: #EEE; font-size: 13px; font-weight: bold; }
+        .choice-desc { color: #888; font-size: 11px; margin-top: 3px; }
+        .choice-cost { color: var(--gold); font-size: 10px; margin-top: 3px; }
+    </style>
+</head>
+<body>
+    <!-- 主界面 -->
+    <div class="screen active" id="screenMain">
+        <div class="header">
+            <div class="title">江湖残卷</div>
+            <div class="subtitle">独创武学招式系统 · 虚实架三招互克</div>
+        </div>
+        <div class="stats">
+            <div class="stat"><div class="stat-val" id="sRuns">0</div><div class="stat-label">总局数</div></div>
+            <div class="stat"><div class="stat-val" id="sWins">0</div><div class="stat-label">通关</div></div>
+            <div class="stat"><div class="stat-val" id="sBest">0</div><div class="stat-label">最高波</div></div>
+            <div class="stat"><div class="stat-val" id="sRelics">0</div><div class="stat-label">遗物</div></div>
+        </div>
+        <div class="frag-section">
+            <div class="frag-title">📜 已收集残页 (永久解锁)</div>
+            <div class="frag-list" id="fragDisplay"></div>
+        </div>
+        <div class="meridian-section">
+            <div class="mer-title">
+                <span>🌀 经脉 (永久加成)</span>
+                <span id="merCount">0/6</span>
+            </div>
+            <div class="meridian-dots" id="merDots"></div>
+            <div class="mer-bonus" id="merBonus">点击已解锁的穴位查看加成</div>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-start" onclick="startRun()">🗡️ 开始探索</button>
+            <button class="btn btn-reset" onclick="resetProg()">🔄 重置进度</button>
+        </div>
+    </div>
+
+    <!-- 角色选择 -->
+    <div class="screen" id="screenSelect">
+        <div class="char-select">
+            <div class="char-title">🎯 选择你的武者</div>
+            <div class="char-list" id="charList"></div>
+        </div>
+        <button class="start-btn" onclick="confirmChar()">确认 · 开始冒险</button>
+        <button class="back-btn" onclick="showScreen('screenMain')">← 返回</button>
+    </div>
+
+    <!-- 战斗界面 -->
+    <div class="screen" id="screenBattle">
+        <div class="battle-header">
+            <div class="res"><span>💰</span><span class="res-val" id="rGold">0</span></div>
+            <div class="res"><span>💊</span><span class="res-val" id="rPills">0</span></div>
+            <div class="res"><span>🌊</span><span class="res-val" id="rWave">1/5</span></div>
+            <div class="res"><span>⚡</span><span class="res-val" id="rQi">0</span></div>
+        </div>
+
+        <div class="battle-area">
+            <div class="section-label">敌方 ← 点击选择目标</div>
+            <div class="counter-indicator">
+                <div class="counter-item xu">虚(☠️实)</div>
+                <div class="counter-item shi">实(☠️架)</div>
+                <div class="counter-item jia">架(☠️虚)</div>
+            </div>
+            <div class="grid" id="enemyGrid"></div>
+
+            <div style="text-align:center;font-size:12px;color:#444;margin:4px 0;">⚔ 战 ⚔</div>
+
+            <div class="section-label">我方 <span id="myHp" style="color:#FF6B6B;font-size:10px;"></span></div>
+            <div class="grid" id="playerGrid"></div>
+        </div>
+
+        <div class="combo-section">
+            <div class="combo-title">📜 武学连招 — 点击插槽装配招式</div>
+            <div class="combo-slots" id="comboSlots">
+                <div class="combo-slot" id="slot0" onclick="openMovePicker(0)">
+                    <div class="slot-label">起手</div>
+                    <div class="slot-icon">➕</div>
+                </div>
+                <div class="combo-arrow">→</div>
+                <div class="combo-slot" id="slot1" onclick="openMovePicker(1)">
+                    <div class="slot-label">承接</div>
+                    <div class="slot-icon">➕</div>
+                </div>
+                <div class="combo-arrow">→</div>
+                <div class="combo-slot" id="slot2" onclick="openMovePicker(2)">
+                    <div class="slot-label">收招</div>
+                    <div class="slot-icon">➕</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-preview" id="actionPreview"></div>
+        <div class="bottom-panels">
+            <div class="panel">
+                <div class="panel-title">经脉加成</div>
+                <div class="panel-content" id="meridianPanel">—</div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">本局效果</div>
+                <div class="panel-content" id="runBonus">—</div>
+            </div>
+        </div>
+
+        <div class="feedback" id="feedback"></div>
+        <div class="log" id="battleLog"></div>
+        <div class="action-row">
+            <button class="btn-row btn-execute" id="btnExec" onclick="executeCombo()">⚔️ 施展连招</button>
+            <button class="btn-row btn-pill" onclick="usePill()">💊<span class="pill-badge" id="pillBadge">0</span></button>
+            <button class="btn-row btn-end" onclick="endTurn()">结束回合</button>
+        </div>
+    </div>
+
+    <!-- 招式选择器 -->
+    <div class="move-picker" id="movePicker" style="display:none">
+        <div class="picker-header">
+            <div class="picker-title" id="pickerTitle">选择招式</div>
+            <button class="picker-close" onclick="closeMovePicker()">关闭</button>
+        </div>
+        <div class="picker-slots" id="pickerSlots"></div>
+        <div class="picker-body" id="pickerBody"></div>
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="modal" id="modal" style="display:none">
+        <div class="modal-content">
+            <div class="modal-icon" id="mIcon">🏺</div>
+            <div class="modal-title" id="mTitle">事件</div>
+            <div class="modal-desc" id="mDesc">描述</div>
+            <div class="modal-choices" id="mChoices"></div>
+        </div>
+    </div>
+
+    <script>
+    // ==================== 武学招式数据 ====================
+    // 招式类型: 虚(xu)克制实(shi), 实克制架(jia), 架克制虚
+    const MOVES = {
+        // 虚 — 虚招，克制实，特点是回避/快速
+        xu: [
+            { id: 'xu1', name: '撩阴腿', icon: '🦵', type: 'xu', pos: 'start', atk: 0.8, cost: 15, mcd: 1, eff: 'evade', effVal: 0.3, desc: '30%闪避反击' },
+            { id: 'xu2', name: '云手', icon: '☁️', type: 'xu', pos: 'start', atk: 0.6, cost: 10, mcd: 1, eff: 'qi', effVal: 15, desc: '回复15气力' },
+            { id: 'xu3', name: '虚晃', icon: '👻', type: 'xu', pos: 'start', atk: 0.5, cost: 8, mcd: 1, eff: 'counter_up', effVal: 0.2, desc: '下回合克制+20%' },
+            { id: 'xu4', name: '燕子掠', icon: '🐦', type: 'xu', pos: 'start', atk: 1.0, cost: 20, mcd: 2, eff: 'backstab', effVal: 0, desc: '必定克制成功' },
+        ],
+        // 承接招式 — 所有类型都有
+        mid: [
+            { id: 'mid1', name: '弓步冲拳', icon: '👊', type: 'shi', pos: 'mid', atk: 1.2, cost: 18, mcd: 1, eff: 'normal', effVal: 0, desc: '稳定输出' },
+            { id: 'mid2', name: '横拨', icon: '↔️', type: 'xu', pos: 'mid', atk: 0.9, cost: 12, mcd: 1, eff: 'counter_up', effVal: 0.15, desc: '克制+15%' },
+            { id: 'mid3', name: '铁板桥', icon: '🔲', type: 'jia', pos: 'mid', atk: 0.7, cost: 15, mcd: 1, eff: 'shield', effVal: 0.2, desc: '获得20%减伤' },
+            { id: 'mid4', name: '连环掌', icon: '✋', type: 'shi', pos: 'mid', atk: 0.8, cost: 16, mcd: 1, eff: 'double', effVal: 0, desc: '攻击两次' },
+            { id: 'mid5', name: '寒冰掌', icon: '❄️', type: 'xu', pos: 'mid', atk: 1.1, cost: 22, mcd: 2, eff: 'slow', effVal: 1, desc: '使敌人下回合-20%攻' },
+            { id: 'mid6', name: '太极推手', icon: '☯️', type: 'jia', pos: 'mid', atk: 0.6, cost: 14, mcd: 1, eff: 'reflect', effVal: 0.3, desc: '反弹30%伤害' },
+        ],
+        // 收招 — 高伤害/终结技
+        fin: [
+            { id: 'fin1', name: '劈山掌', icon: '⛰️', type: 'shi', pos: 'fin', atk: 2.2, cost: 40, mcd: 3, eff: 'normal', effVal: 0, desc: '高伤害终结' },
+            { id: 'fin2', name: '心意把', icon: '💫', type: 'shi', pos: 'fin', atk: 1.8, cost: 35, mcd: 2, eff: 'heal', effVal: 20, desc: '伤害+恢复20血' },
+            { id: 'fin3', name: '金钟罩', icon: '🛡️', type: 'jia', pos: 'fin', atk: 1.2, cost: 30, mcd: 2, eff: 'shield', effVal: 0.4, desc: '获得40%减伤' },
+            { id: 'fin4', name: '云龙折', icon: '🐉', type: 'xu', pos: 'fin', atk: 1.6, cost: 32, mcd: 2, eff: 'evade', effVal: 0.4, desc: '40%闪避反击' },
+            { id: 'fin5', name: '万佛朝宗', icon: '✨', type: 'shi', pos: 'fin', atk: 3.0, cost: 55, mcd: 4, eff: 'normal', effVal: 0, desc: '终极爆发' },
+            { id: 'fin6', name: '化骨绵掌', icon: '👋', type: 'xu', pos: 'fin', atk: 1.5, cost: 30, mcd: 2, eff: 'drain', effVal: 15, desc: '偷取敌人15血' },
+        ]
+    };
+
+    // 所有招式扁平化
+    const ALL_MOVES = [...MOVES.xu, ...MOVES.mid, ...MOVES.fin];
+
+    // 经脉穴位
+    const MERIDIANS = [
+        { id: 'm1', icon: '🟢', name: '气海', bonus: { qiRegen: 5 }, desc: '气力回复+5/回合' },
+        { id: 'm2', icon: '🔴', name: '命门', bonus: { hp: 20 }, desc: '最大气血+20' },
+        { id: 'm3', icon: '🟡', name: '膻中', bonus: { atk: 3 }, desc: '攻击力+3' },
+        { id: 'm4', icon: '🟣', name: '百会', bonus: { critRate: 0.05 }, desc: '暴击率+5%' },
+        { id: 'm5', icon: '🔵', name: '涌泉', bonus: { def: 2 }, desc: '防御+2' },
+        { id: 'm6', icon: '⚪', name: '丹田', bonus: { qiStart: 20 }, desc: '初始气力+20' },
+    ];
+
+    // 遗物
+    const RELICS = [
+        { id: 'r1', icon: '⚔️', name: '残剑', desc: '攻击+4', eff: g => g.bonusAtk += 4 },
+        { id: 'r2', icon: '🛡️', name: '铁甲', desc: '防御+3', eff: g => g.bonusDef += 3 },
+        { id: 'r3', icon: '💨', name: '疾风', desc: '气力+8/回', eff: g => g.bonusQiRegen += 8 },
+        { id: 'r4', icon: '💎', name: '灵石', desc: '初始气+40', eff: g => g.bonusQiStart += 40 },
+        { id: 'r5', icon: '📿', name: '护符', desc: '首伤减半', eff: g => g.firstHitHalf = true },
+        { id: 'r6', icon: '🔥', name: '烈阳', desc: '暴击伤+50%', eff: g => g.bonusCritDmg += 0.5 },
+        { id: 'r7', icon: '💚', name: '疗伤', desc: '击杀+15血', eff: g => g.bonusKillHeal += 15 },
+        { id: 'r8', icon: '🌀', name: '连斩', desc: '连击+1次', eff: g => g.bonusDoubleHit += 1 },
+        { id: 'r9', icon: '⏰', name: '迅捷', desc: '气力上限+30', eff: g => g.bonusQiMax += 30 },
+        { id: 'r10', icon: '🌙', name: '月华', desc: '虚招伤害+20%', eff: g => g.bonusXuDmg += 0.2 },
+    ];
+
+    // 敌人
+    const ENEMIES_TPL = {
+        bandit: { name: '山贼', icon: '👊', hp: 45, atk: 10, def: 2, gold: 18, types: ['shi'] },
+        thug: { name: '恶霸', icon: '😈', hp: 60, atk: 14, def: 4, gold: 25, types: ['shi', 'jia'] },
+        assassin: { name: '刺客', icon: '🗡️', hp: 40, atk: 20, def: 2, gold: 32, types: ['xu'] },
+        monk: { name: '武僧', icon: '🧑‍🦱', hp: 85, atk: 12, def: 10, gold: 38, types: ['jia'] },
+        master: { name: '掌门', icon: '🧔', hp: 130, atk: 20, def: 10, gold: 65, types: ['shi', 'xu', 'jia'] },
+        boss: { name: '光明顶主', icon: '💀', hp: 450, atk: 28, def: 18, gold: 350, types: ['shi', 'xu', 'jia'] },
+    };
+
+    // 事件
+    const EVENTS = [
+        { icon: '📜', title: '散落残页', desc: '路边发现半本残破武学...', choices: [
+            { name: '研习修炼', effect: g => {
+                const pool = ALL_MOVES.filter(m => !g.ownedMoves.includes(m.id));
+                if (pool.length > 0) {
+                    const m = pool[Math.floor(Math.random() * pool.length)];
+                    g.ownedMoves.push(m.id);
+                    g.permanent.ownedMoves.push(m.id);
+                    savePermanent();
+                    showFB(`习得「${m.name}」！`, 'success');
+                    addLog(`获得残页「${m.name}」`, 'relic');
+                } else { g.gold += 60; showFB('已学完，退还60银', 'info'); addLog('无新招式，获得60银', 'info'); }
+            }},
+            { name: '卖钱(50银)', effect: g => { g.gold += 50; showFB('+50银', 'info'); addLog('卖出残页，得50银', 'reward'); }},
+        ]},
+        { icon: '📜', title: '招式合集', desc: '一本完整武学秘籍...', choices: [
+            { name: '学习', effect: g => {
+                const pool = ALL_MOVES.filter(m => !g.ownedMoves.includes(m.id));
+                if (pool.length > 0) {
+                    const m = pool[Math.floor(Math.random() * pool.length)];
+                    g.ownedMoves.push(m.id);
+                    g.permanent.ownedMoves.push(m.id);
+                    savePermanent();
+                    showFB(`习得「${m.name}」！`, 'success');
+                    addLog(`获得残页「${m.name}」`, 'relic');
+                }
+            }},
+            { name: '不学', effect: () => {} },
+        ]},
+        { icon: '🏺', title: '失落遗物', desc: '古老器物散发着神秘力量...', choices: [
+            { name: '拾取', effect: g => {
+                const unlocked = g.permanent.unlockedRelics || [];
+                const available = RELICS.filter(r => !unlocked.includes(r.id));
+                if (available.length > 0) {
+                    const r = available[Math.floor(Math.random() * available.length)];
+                    g.permanent.unlockedRelics = [...unlocked, r.id];
+                    g.runRelics.push(r);
+                    r.eff(g);
+                    savePermanent();
+                    showFB(`获得遗物「${r.name}」！`, 'success');
+                    addLog(`永久遗物「${r.name}」`, 'relic');
+                } else { g.gold += 60; showFB('遗物已满，退还60银', 'info'); }
+            }},
+            { name: '离开', effect: () => {} },
+        ]},
+        { icon: '💰', title: '黑市商人', desc: '神秘商人出售各种物资...', choices: [
+            { name: '丹药(35银)', cost: 35, effect: g => { g.gold -= 35; g.pills.push('heal'); showFB('购买丹药！', 'success'); addLog('买丹药', 'info'); }},
+            { name: '气力散(25银)', cost: 25, effect: g => { g.gold -= 25; g.player.qi = Math.min(g.player.maxQi, g.player.qi + 60); showFB('气力+60！', 'success'); addLog('买气力散', 'heal'); }},
+            { name: '离开', effect: () => {} },
+        ]},
+        { icon: '✨', title: '经脉顿悟', desc: '冥冥中感受到体内真气涌动...', choices: [
+            { name: '冲击穴位', effect: g => {
+                const locked = MERIDIANS.filter(m => !g.permanent.unlockedMeridians.includes(m.id));
+                if (locked.length > 0) {
+                    const m = locked[Math.floor(Math.random() * locked.length)];
+                    g.permanent.unlockedMeridians.push(m.id);
+                    savePermanent();
+                    showFB(`开通「${m.name}」穴位！`, 'success');
+                    addLog(`永久开通「${m.name}」`, 'relic');
+                } else { g.gold += 50; showFB('穴位已满，退还50银', 'info'); }
+            }},
+            { name: '离开', effect: () => {} },
+        ]},
+        { icon: '🏠', title: '好心农家', desc: '热情村民邀请你休息...', choices: [
+            { name: '休息', effect: g => { g.player.hp = g.player.maxHp; g.player.qi = g.player.maxQi; showFB('完全恢复！', 'success'); addLog('休息完全恢复', 'heal'); }},
+            { name: '付钱住店(+)', cost: -15, effect: g => { g.player.hp = g.player.maxHp; g.player.qi = g.player.maxQi; g.gold += 15; showFB('恢复+15银', 'success'); addLog('住店恢复+15银', 'heal'); }},
+        ]},
+        { icon: '⚔️', title: '江湖恩怨', desc: '侠客要与你比武...', choices: [
+            { name: '应战', effect: g => {
+                if (Math.random() > 0.35) { g.gold += 70; showFB('比武胜利！+70银', 'success'); addLog('比武胜利+70银', 'reward'); }
+                else { g.player.hp -= 40; showFB('比武失败！-40血', 'fail'); addLog('比武失败-40血', 'dmg'); }
+            }},
+            { name: '绕路(-15气)', effect: g => { g.player.qi -= 15; showFB('绕路消耗15气', 'info'); addLog('绕路-15气', 'info'); }},
+        ]},
+        { icon: '📦', title: '神秘宝箱', desc: '落满灰尘的宝箱...', choices: [
+            { name: '小心开', effect: g => {
+                if (Math.random() > 0.3) { g.gold += 55; showFB('+55银！', 'success'); addLog('宝箱+55银', 'reward'); }
+                else { g.player.hp -= 35; showFB('陷阱！-35血', 'fail'); addLog('宝箱陷阱-35血', 'dmg'); }
+            }},
+            { name: '直接开', effect: g => {
+                if (Math.random() > 0.5) { g.gold += 100; showFB('运气爆棚！+100银', 'success'); addLog('宝箱100银！', 'reward'); }
+                else { g.player.hp -= 55; showFB('大陷阱！-55血', 'fail'); addLog('宝箱大陷阱-55血', 'dmg'); }
+            }},
+            { name: '不碰', effect: () => {} },
+        ]},
+        { icon: '🩸', title: '重伤武者', desc: '奄奄一息的武者...', choices: [
+            { name: '救治(1丹)', cost: 'pills', effect: g => {
+                if (g.pills.length > 0) { g.pills.pop(); g.player.hp = g.player.maxHp; showFB('救治成功！完全恢复', 'success'); addLog('救治并恢复', 'heal'); }
+                else { showFB('没有丹药！', 'fail'); }
+            }},
+            { name: '放弃', effect: () => {} },
+        ]},
+        { icon: '🗡️', title: '拦路劫匪', desc: '黑衣人拦住去路！', choices: [
+            { name: '强行突破', effect: g => { g.player.hp -= 30; showFB('突破！-30血', 'fail'); addLog('强行突破-30血', 'dmg'); }},
+            { name: '交保护费(45银)', cost: 45, effect: g => { g.gold -= 45; showFB('交钱通过', 'info'); addLog('交保护费', 'info'); }},
+            { name: '战斗', effect: g => {
+                if (Math.random() > 0.4) { g.gold += 110; showFB('击退！+110银', 'success'); addLog('击退劫匪+110银', 'reward'); }
+                else { g.player.hp -= 65; showFB('寡不敌众！-65血', 'fail'); addLog('被劫匪击败-65血', 'dmg'); }
+            }},
+        ]},
+    ];
+
+    // 武者模板
+    const WARRIORS = [
+        { id: 'sword', name: '逍遥剑客', icon: '🗡️', maxHp: 95, atk: 20, def: 5, maxQi: 100, defaultMoves: ['xu1', 'mid1', 'fin1'] },
+        { id: 'fist', name: '铁拳武僧', icon: '👊', maxHp: 135, atk: 16, def: 12, maxQi: 100, defaultMoves: ['mid3', 'mid6', 'fin3'] },
+        { id: 'blade', name: '幻影刀客', icon: '🗡️', maxHp: 85, atk: 24, def: 3, maxQi: 100, defaultMoves: ['xu4', 'mid4', 'fin5'] },
+        { id: 'spear', name: '长枪兵', icon: '🔱', maxHp: 105, atk: 18, def: 8, maxQi: 90, defaultMoves: ['mid5', 'mid1', 'fin2'] },
+        { id: 'dagger', name: '暗影刺客', icon: '🗡️', maxHp: 75, atk: 27, def: 2, maxQi: 100, defaultMoves: ['xu1', 'mid2', 'fin4'] },
+        { id: 'staff', name: '逍遥道人', icon: '🪄', maxHp: 90, atk: 22, def: 6, maxQi: 120, defaultMoves: ['xu2', 'mid5', 'fin6'] },
+    ];
+
+    // ==================== 游戏状态 ====================
+    let G = {};
+
+    function initG() {
+        G = {
+            player: null, enemies: [], gold: 0, pills: [],
+            wave: 1, maxWave: 5, turn: 1,
+            combo: [null, null, null], // 当前连招
+            currentSlot: 0,
+            runRelics: [],
+            permanent: { runs: 0, wins: 0, bestWave: 0, unlockedRelics: [], ownedMoves: ['xu1','mid1','fin1'], unlockedMeridians: [] },
+            // 本局加成
+            bonusAtk: 0, bonusDef: 0, bonusQiRegen: 0, bonusQiStart: 0, bonusQiMax: 0,
+            bonusCritDmg: 0, bonusCritRate: 0, bonusKillHeal: 0, bonusDoubleHit: 0, bonusXuDmg: 0,
+            firstHitHalf: false, firstHitTaken: false,
+            // 战斗状态
+            shield: 0, counterUp: 0, nextTurnEvade: false, slowed: false,
+        };
+    }
+
+    // ==================== 存储 ====================
+    function loadPermanent() {
+        const s = localStorage.getItem('jianghu_v3');
+        if (s) {
+            const d = JSON.parse(s);
+            G.permanent = { ...G.permanent, ...d };
+        }
+        applyMeridians();
+        applyRelicsG();
+    }
+
+    function savePermanent() {
+        localStorage.setItem('jianghu_v3', JSON.stringify({
+            runs: G.permanent.runs, wins: G.permanent.wins, bestWave: G.permanent.bestWave,
+            unlockedRelics: G.permanent.unlockedRelics,
+            ownedMoves: [...new Set(G.permanent.ownedMoves)],
+            unlockedMeridians: G.permanent.unlockedMeridians,
+        }));
+    }
+
+    function resetProg() {
+        if (confirm('重置所有进度？')) {
+            localStorage.removeItem('jianghu_v3');
+            location.reload();
+        }
+    }
+
+    function applyMeridians() {
+        G.merBonus = { qiRegen: 0, hp: 0, atk: 0, critRate: 0, def: 0, qiStart: 0 };
+        (G.permanent.unlockedMeridians || []).forEach(id => {
+            const m = MERIDIANS.find(x => x.id === id);
+            if (m) Object.keys(m.bonus).forEach(k => G.merBonus[k] = (G.merBonus[k] || 0) + m.bonus[k]);
+        });
+    }
+
+    function applyRelicsG() {
+        G.bonusAtk = 0; G.bonusDef = 0; G.bonusQiRegen = 0; G.bonusQiStart = 0; G.bonusQiMax = 0;
+        G.bonusCritDmg = 0; G.bonusCritRate = 0; G.bonusKillHeal = 0; G.bonusDoubleHit = 0; G.bonusXuDmg = 0;
+        G.firstHitHalf = false;
+        (G.permanent.unlockedRelics || []).forEach(id => {
+            const r = RELICS.find(x => x.id === id);
+            if (r) r.eff(G);
+        });
+    }
+
+    // ==================== 界面 ====================
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function updateMain() {
+        document.getElementById('sRuns').textContent = G.permanent.runs;
+        document.getElementById('sWins').textContent = G.permanent.wins;
+        document.getElementById('sBest').textContent = G.permanent.bestWave;
+        document.getElementById('sRelics').textContent = (G.permanent.unlockedRelics || []).length;
+
+        // 碎片展示
+        const fragD = document.getElementById('fragDisplay');
+        const owned = G.permanent.ownedMoves || ['xu1','mid1','fin1'];
+        const unique = [...new Set(owned)];
+        if (unique.length === 0) {
+            fragD.innerHTML = '<div class="no-frag">探索中获得残页后将永久解锁</div>';
+        } else {
+            fragD.innerHTML = unique.map(id => {
+                const m = ALL_MOVES.find(x => x.id === id);
+                if (!m) return '';
+                return `<div class="frag-tag ${m.type}">${m.icon}${m.name}</div>`;
+            }).join('');
+        }
+
+        // 经脉
+        const dots = document.getElementById('merDots');
+        dots.innerHTML = MERIDIANS.map(m => {
+            const unlocked = (G.permanent.unlockedMeridians || []).includes(m.id);
+            return `<div class="mer-dot ${unlocked ? 'unlocked' : ''}" title="${m.desc}">${m.icon}</div>`;
+        }).join('');
+        document.getElementById('merCount').textContent = `${(G.permanent.unlockedMeridians || []).length}/6`;
+        const bonus = G.merBonus;
+        let txt = [];
+        if (bonus.qiRegen) txt.push(`气+${bonus.qiRegen}/回`);
+        if (bonus.hp) txt.push(`血+${bonus.hp}`);
+        if (bonus.atk) txt.push(`攻+${bonus.atk}`);
+        if (bonus.def) txt.push(`防+${bonus.def}`);
+        if (bonus.critRate) txt.push(`暴+${(bonus.critRate*100).toFixed(0)}%`);
+        if (bonus.qiStart) txt.push(`初气+${bonus.qiStart}`);
+        document.getElementById('merBonus').textContent = txt.length ? txt.join(' · ') : '尚未开通穴位';
+    }
+
+    // ==================== 角色选择 ====================
+    let selCharIdx = 0;
+    function startRun() {
+        G.permanent.runs++;
+        savePermanent();
+        showScreen('screenSelect');
+        const shuffled = [...WARRIORS].sort(() => Math.random() - 0.5);
+        G.charOptions = shuffled.slice(0, 4);
+        selCharIdx = 0;
+        const list = document.getElementById('charList');
+        list.innerHTML = '';
+        G.charOptions.forEach((w, i) => {
+            const card = document.createElement('div');
+            card.className = 'char-card' + (i === 0 ? ' sel' : '');
+            card.innerHTML = `
+                <div class="char-avatar">${w.icon}</div>
+                <div>
+                    <div class="char-name">${w.name}</div>
+                    <div class="char-type">气血:${w.maxHp} 攻击:${w.atk} 防御:${w.def}</div>
+                    <div class="char-stats">初始招式: ${w.defaultMoves.map(id => ALL_MOVES.find(m=>m.id===id)?.name).join(' → ')}</div>
+                </div>
+            `;
+            card.onclick = () => {
+                document.querySelectorAll('.char-card').forEach(c => c.classList.remove('sel'));
+                card.classList.add('sel');
+                selCharIdx = i;
+            };
+            list.appendChild(card);
+        });
+    }
+
+    function confirmChar() {
+        const w = G.charOptions[selCharIdx];
+        G.player = JSON.parse(JSON.stringify(w));
+        G.player.hp = G.player.maxHp;
+        G.player.qi = 50 + G.bonusQiStart + G.merBonus.qiStart;
+        G.player.maxHp += G.merBonus.hp || 0;
+        G.player.hp = G.player.maxHp;
+        G.player.maxQi = 100 + G.bonusQiMax;
+        G.player.atk += G.bonusAtk + (G.merBonus.atk || 0);
+        G.player.def += G.bonusDef + (G.merBonus.def || 0);
+
+        G.gold = 0; G.pills = []; G.wave = 1; G.turn = 1;
+        G.runRelics = [];
+        G.shield = 0; G.counterUp = 0; G.nextTurnEvade = false; G.slowed = false;
+        G.firstHitTaken = false;
+
+        // 初始化连招为默认值
+        G.combo = w.defaultMoves.map(id => ALL_MOVES.find(m => m.id === id)).filter(Boolean);
+        G.ownedMoves = [...new Set([...(G.permanent.ownedMoves || []), ...w.defaultMoves])];
+
+        showScreen('screenBattle');
+        spawnWave();
+        renderBattle();
+        renderCombo();
+        addLog(`「${G.player.name}」踏入江湖...`, 'info');
+        updatePanels();
+        showWaveBanner(`第 ${G.wave} 波`);
+    }
+
+    // ==================== 战斗 ====================
+    function spawnWave() {
+        G.enemies = [];
+        if (G.wave === G.maxWave) {
+            const b = ENEMIES_TPL.boss;
+            G.enemies.push({ ...b, hp: b.hp, maxHp: b.hp, qi: 0, actionType: b.types[Math.floor(Math.random() * b.types.length)], stunned: false });
+            return;
+        }
+        const pool = ['bandit', 'thug', 'assassin'];
+        const count = Math.min(G.wave + 1, 3);
+        for (let i = 0; i < count; i++) {
+            const type = pool[Math.floor(Math.random() * pool.length)];
+            const t = ENEMIES_TPL[type];
+            G.enemies.push({ ...t, hp: t.hp, maxHp: t.hp, qi: 0, actionType: t.types[Math.floor(Math.random() * t.types.length)], stunned: false });
+        }
+    }
+
+    function renderBattle() {
+        document.getElementById('rGold').textContent = G.gold;
+        document.getElementById('rPills').textContent = G.pills.length;
+        document.getElementById('rWave').textContent = `${G.wave}/${G.maxWave}`;
+        document.getElementById('rQi').textContent = Math.floor(G.player.qi);
+        document.getElementById('myHp').textContent = `${G.player.hp}/${G.player.maxHp}`;
+        document.getElementById('pillBadge').textContent = G.pills.length;
+
+        // 敌人
+        const eGrid = document.getElementById('enemyGrid');
+        eGrid.innerHTML = '';
+        for (let i = 0; i < 3; i++) {
+            const cell = document.createElement('div');
+            const e = G.enemies[i];
+            if (e && e.hp > 0) {
+                cell.className = 'cell target';
+                cell.onclick = () => selectTarget(e);
+                cell.innerHTML = `
+                    <div class="enemy-qi">⚡${e.actionType === 'xu' ? '虚' : e.actionType === 'shi' ? '实' : '架'}</div>
+                    <div class="char-icon">${e.icon}</div>
+                    <div class="char-name">${e.name}</div>
+                    <div class="hp-bar"><div class="hp-fill" style="width:${e.hp/e.maxHp*100}%"></div></div>
+                `;
+            } else {
+                cell.className = 'cell empty';
+                cell.innerHTML = '·';
+            }
+            eGrid.appendChild(cell);
+        }
+
+        // 玩家
+        const pGrid = document.getElementById('playerGrid');
+        pGrid.innerHTML = '';
+        for (let i = 0; i < 3; i++) {
+            const cell = document.createElement('div');
+            if (i === 1) {
+                cell.className = 'cell sel';
+                const shieldTxt = G.shield > 0 ? `<div style="position:absolute;top:2px;left:4px;font-size:9px;color:#87CEEB;">🛡️${Math.floor(G.shield*100)}%</div>` : '';
+                cell.innerHTML = shieldTxt + `<div class="char-icon">${G.player.icon}</div><div class="char-name">${G.player.name}</div><div class="hp-bar"><div class="hp-fill" style="width:${G.player.hp/G.player.maxHp*100}%"></div></div><div class="qi-bar"><div class="qi-fill" style="width:${G.player.qi/G.player.maxQi*100}%"></div></div>`;
+            } else {
+                cell.className = 'cell empty';
+                cell.innerHTML = '·';
+            }
+            pGrid.appendChild(cell);
+        }
+
+        updatePreview();
+    }
+
+    function renderCombo() {
+        for (let i = 0; i < 3; i++) {
+            const slot = document.getElementById(`slot${i}`);
+            const m = G.combo[i];
+            if (m) {
+                slot.className = `combo-slot filled ${m.type}`;
+                slot.innerHTML = `<div class="slot-icon">${m.icon}</div><div class="slot-label">${i===0?'起手':i===1?'承接':'收招'}</div><div class="slot-name">${m.name}</div>`;
+            } else {
+                slot.className = 'combo-slot';
+                slot.innerHTML = `<div class="slot-label">${i===0?'起手':i===1?'承接':'收招'}</div><div class="slot-icon">➕</div>`;
+            }
+        }
+    }
+
+    function selectTarget(enemy) {
+        G.selectedTarget = enemy;
+        showFB(`目标: ${enemy.name}(${enemy.actionType==='xu'?'虚':enemy.actionType==='shi'?'实':'架'})`, 'info');
+        updatePreview();
+    }
+
+    function updatePreview() {
+        const el = document.getElementById('actionPreview');
+        const filled = G.combo.filter(Boolean).length;
+        
+        if (!G.selectedTarget) {
+            el.innerHTML = '<div class="preview-text no">点击敌人选择目标</div>';
+            document.getElementById('btnExec').disabled = true;
+            return;
+        }
+
+        if (filled === 0) {
+            el.innerHTML = '<div class="preview-text no">请装配招式</div>';
+            document.getElementById('btnExec').disabled = true;
+            return;
+        }
+
+        const cost = G.combo.reduce((s, m) => s + (m ? m.cost : 0), 0);
+        if (G.player.qi < cost) {
+            el.innerHTML = `<div class="preview-text no">气力不足 (需要${cost})</div>`;
+            document.getElementById('btnExec').disabled = true;
+            return;
+        }
+
+        // 预测克制关系
+        const comboTypes = G.combo.map(m => m?.type).filter(Boolean);
+        const enemyType = G.selectedTarget.actionType;
+        let counterResult = checkCounter(comboTypes, enemyType);
+        
+        let txt = `${filled}式连招 · 消耗${cost}气力`;
+        if (counterResult === 'win') txt += ' · ☠️克制成功！';
+        else if (counterResult === 'lose') txt += ' · ⚠️被克制！';
+        
+        el.innerHTML = `<div class="preview-text ${counterResult === 'win' ? 'counter' : counterResult === 'lose' ? 'fail' : 'can'}">${txt}</div>`;
+        document.getElementById('btnExec').disabled = false;
+    }
+
+    function updatePanels() {
+        let merTxt = [];
+        const mb = G.merBonus;
+        if (mb.qiRegen) merTxt.push(`气+${mb.qiRegen}/回`);
+        if (mb.hp) merTxt.push(`血+${mb.hp}`);
+        if (mb.atk) merTxt.push(`攻+${mb.atk}`);
+        if (mb.def) merTxt.push(`防+${mb.def}`);
+        if (mb.critRate) merTxt.push(`暴+${(mb.critRate*100).toFixed(0)}%`);
+        document.getElementById('meridianPanel').textContent = merTxt.length ? merTxt.join(' · ') : '无';
+
+        let runTxt = [];
+        if (G.shield > 0) runTxt.push(`🛡️减伤${Math.floor(G.shield*100)}%`);
+        if (G.counterUp > 0) runTxt.push(`☠️克制+${Math.floor(G.counterUp*100)}%`);
+        if (G.nextTurnEvade) runTxt.push(`💨下回闪避`);
+        if (G.slowed) runTxt.push(`❄️敌攻-20%`);
+        document.getElementById('runBonus').textContent = runTxt.length ? runTxt.join(' ') : '—';
+    }
+
+    // 克制: 虚克实, 实克架, 架克虚
+    function checkCounter(attTypes, defType) {
+        let wins = 0, losses = 0;
+        attTypes.forEach(t => {
+            if ((t === 'xu' && defType === 'shi') || (t === 'shi' && defType === 'jia') || (t === 'jia' && defType === 'xu')) wins++;
+            if ((t === 'shi' && defType === 'xu') || (t === 'jia' && defType === 'shi') || (t === 'xu' && defType === 'jia')) losses++;
+        });
+        if (wins > losses) return 'win';
+        if (losses > wins) return 'lose';
+        return 'neutral';
+    }
+
+    function executeCombo() {
+        if (!G.selectedTarget || G.combo.filter(Boolean).length === 0) return;
+        const cost = G.combo.reduce((s, m) => s + (m ? m.cost : 0), 0);
+        if (G.player.qi < cost) { showFB('气力不足！', 'fail'); return; }
+
+        G.player.qi -= cost;
+        const enemy = G.selectedTarget;
+        const attTypes = G.combo.map(m => m?.type).filter(Boolean);
+        const counter = checkCounter(attTypes, enemy.actionType);
+        const counterBonus = G.counterUp;
+        const counterMult = counter === 'win' ? (1.5 + counterBonus) : counter === 'lose' ? 0.6 : 1;
+
+        let totalDmg = 0;
+        const hits = G.combo.filter(Boolean).length + G.bonusDoubleHit;
+
+        G.combo.forEach((m, idx) => {
+            if (!m) return;
+            
+            // 闪避
+            if (Math.random() < 0.12) {
+                showDmgPop(document.querySelector('#enemyGrid .cell.target'), 0, 'miss');
+                addLog(`第${idx+1}式「${m.name}」被闪避`, 'info');
+                return;
+            }
+
+            let atk = G.player.atk * m.atk;
+            if (m.type === 'xu') atk *= (1 + G.bonusXuDmg);
+            
+            let dmg = Math.floor(atk * (1 - enemy.def / (enemy.def + 50)) * counterMult);
+            
+            // 暴击
+            const critRate = 0.12 + (G.merBonus.critRate || 0);
+            if (Math.random() < critRate) {
+                dmg = Math.floor(dmg * (2 + G.bonusCritDmg));
+                showDmgPop(document.querySelector('#enemyGrid .cell.target'), dmg, 'crit');
+                addLog(`☀️暴击！`, 'dmg');
+            } else {
+                showDmgPop(document.querySelector('#enemyGrid .cell.target'), dmg, 'dmg');
+            }
+
+            enemy.hp -= dmg;
+            totalDmg += dmg;
+            
+            // 特效
+            if (m.eff === 'qi') G.player.qi = Math.min(G.player.maxQi, G.player.qi + m.effVal);
+            if (m.eff === 'heal') { G.player.hp = Math.min(G.player.maxHp, G.player.hp + m.effVal); showFB(`+${m.effVal}血`, 'success'); }
+            if (m.eff === 'shield') G.shield = Math.max(G.shield, m.effVal);
+            if (m.eff === 'counter_up') G.counterUp = Math.min(G.counterUp + m.effVal, 0.5);
+            if (m.eff === 'evade') G.nextTurnEvade = true;
+            if (m.eff === 'slow') G.slowed = true;
+            if (m.eff === 'reflect') G.reflect = m.effVal;
+            if (m.eff === 'drain') { G.player.hp = Math.min(G.player.maxHp, G.player.hp + m.effVal); enemy.hp -= m.effVal; }
+
+            addLog(`第${idx+1}式「${m.name}」${dmg}伤害`, 'combo');
+        });
+
+        // 额外连击
+        for (let i = 0; i < G.bonusDoubleHit; i++) {
+            if (enemy.hp <= 0) break;
+            const exDmg = Math.floor(G.player.atk * 0.5 * (1 - enemy.def / (enemy.def + 50)));
+            enemy.hp -= exDmg;
+            totalDmg += exDmg;
+            showDmgPop(document.querySelector('#enemyGrid .cell.target'), exDmg, 'dmg');
+            addLog(`连击！+${exDmg}`, 'combo');
+        }
+
+        // 克制反馈
+        if (counter === 'win') {
+            showFB('☠️ 招式克制成功！伤害+50%', 'counter-win');
+            addLog(`☠️克制${enemy.name}！`, 'counter');
+        } else if (counter === 'lose') {
+            showFB('⚠️ 被敌人克制！伤害-40%', 'counter-lose');
+            addLog(`⚠️被${enemy.name}克制`, 'counter');
+        }
+
+        if (totalDmg > 0) showFB(`总伤害: ${totalDmg}`, totalDmg > 30 ? 'success' : 'info');
+
+        // 清除状态
+        G.counterUp = 0;
+
+        checkDead();
+    }
+
+    function showDmgPop(el, amt, type) {
+        if (!el) return;
+        const pop = document.createElement('div');
+        pop.className = `dmg-pop ${type}`;
+        pop.textContent = type === 'miss' ? '闪避' : (type === 'crit' ? `${amt}!` : `-${amt}`);
+        pop.style.left = '50%'; pop.style.top = '30%';
+        el.appendChild(pop);
+        setTimeout(() => pop.remove(), 800);
+    }
+
+    function showWaveBanner(text) {
+        const b = document.createElement('div');
+        b.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:32px;color:var(--gold);font-weight:bold;text-shadow:0 0 20px var(--gold);z-index:500;animation:waveIn 1.5s forwards;pointer-events:none;';
+        b.textContent = text;
+        b.innerHTML = `<style>@keyframes waveIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.5)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}80%{opacity:1}100%{opacity:0}}</style>${text}`;
+        document.body.appendChild(b);
+        setTimeout(() => b.remove(), 1500);
+    }
+
+    function checkDead() {
+        const dead = G.enemies.filter(e => e.hp <= 0);
+        G.enemies = G.enemies.filter(e => e.hp > 0);
+        dead.forEach(e => {
+            G.gold += e.gold;
+            addLog(`击杀${e.name}！+${e.gold}银`, 'reward');
+            if (G.bonusKillHeal > 0) {
+                G.player.hp = Math.min(G.player.maxHp, G.player.hp + G.bonusKillHeal);
+                showFB(`击杀回复+${G.bonusKillHeal}血`, 'success');
+            }
+        });
+
+        if (G.enemies.length === 0) {
+            if (G.wave >= G.maxWave) { endRun(true); }
+            else {
+                G.wave++;
+                G.selectedTarget = null;
+                showWaveBanner(`第 ${G.wave} 波`);
+                addLog(`第${G.wave}波来袭！`, 'info');
+                setTimeout(() => {
+                    spawnWave();
+                    renderBattle();
+                    if (Math.random() < 0.55) triggerEvent();
+                }, 800);
+            }
+        } else {
+            G.selectedTarget = G.enemies[0]; // 自动选下一个
+            renderBattle();
+            if (G.player.hp <= 0) endRun(false);
+        }
+    }
+
+    function endTurn() {
+        // 敌人回合
+        const slowed = G.slowed;
+        G.slowed = false;
+
+        G.enemies.filter(e => e.hp > 0 && !e.stunned).forEach(enemy => {
+            // 闪避检查
+            if (G.nextTurnEvade && Math.random() < 0.5) {
+                showFB('闪避攻击！', 'success');
+                addLog('闪避攻击', 'info');
+                G.nextTurnEvade = false;
+                return;
+            }
+            if (Math.random() < 0.15) {
+                showFB(`${enemy.name}闪避！`, 'info');
+                addLog(`${enemy.name}闪避`, 'info');
+                return;
+            }
+
+            let dmg = Math.floor(enemy.atk * (1 - G.player.def / (G.player.def + 50)));
+            if (slowed) dmg = Math.floor(dmg * 0.8);
+            if (G.firstHitHalf && !G.firstHitTaken) { dmg = Math.floor(dmg / 2); G.firstHitTaken = true; }
+            dmg = Math.floor(dmg * (1 - G.shield));
+            G.shield = 0;
+
+            G.player.hp -= dmg;
+            const cell = document.querySelector('#playerGrid .cell.sel');
+            showDmgPop(cell, dmg, 'dmg');
+            showFB(`-${dmg}血！`, 'fail');
+            addLog(`${enemy.name}攻击！-${dmg}血`, 'dmg');
+
+            // 反弹
+            if (G.reflect && G.reflect > 0) {
+                const rDmg = Math.floor(dmg * G.reflect);
+                enemy.hp -= rDmg;
+                addLog(`反弹${rDmg}伤害`, 'counter');
+                G.reflect = 0;
+            }
+        });
+
+        G.enemies.forEach(e => e.stunned = false);
+        G.player.qi = Math.min(G.player.maxQi, G.player.qi + 25 + G.bonusQiRegen + (G.merBonus.qiRegen || 0));
+        G.turn++;
+        G.shield = Math.max(0, G.shield - 0.2);
+
+        if (G.player.hp <= 0) { G.player.hp = 0; endRun(false); }
+        renderBattle();
+        updatePanels();
+    }
+
+    function usePill() {
+        if (G.pills.length === 0) { showFB('没有丹药！', 'fail'); return; }
+        G.pills.pop();
+        const heal = Math.min(60, G.player.maxHp - G.player.hp);
+        G.player.hp = Math.min(G.player.maxHp, G.player.hp + 60);
+        showFB(`丹药！+${heal}血`, 'success');
+        addLog(`丹药恢复${heal}血`, 'heal');
+        renderBattle();
+    }
+
+    function endRun(victory) {
+        G.permanent.bestWave = Math.max(G.permanent.bestWave, G.wave);
+        if (victory) {
+            G.permanent.wins++;
+            showModal('🏆', '通关成功！', `带领「${G.player.name}」闯过${G.maxWave}波！\n💰 银两：${G.gold}\n📜 新招式：${G.ownedMoves.length}`, [
+                { name: '再来一局', effect: () => { hideModal(); showScreen('screenMain'); updateMain(); }}
+            ]);
+        } else {
+            showModal('💀', '阵亡', `「${G.player.name}」倒在第${G.wave}波...\n💰 银两：${G.gold}`, [
+                { name: '重新挑战', effect: () => { hideModal(); confirmChar(); }},
+                { name: '返回', effect: () => { hideModal(); showScreen('screenMain'); updateMain(); }}
+            ]);
+        }
+        savePermanent();
+    }
+
+    // ==================== 招式选择器 ====================
+    function openMovePicker(slot) {
+        G.currentSlot = slot;
+        const picker = document.getElementById('movePicker');
+        picker.style.display = 'flex';
+        const titles = ['选择「起手」招式', '选择「承接」招式', '选择「收招」招式'];
+        document.getElementById('pickerTitle').textContent = titles[slot];
+
+        // 显示当前连招
+        const pSlots = document.getElementById('pickerSlots');
+        pSlots.innerHTML = G.combo.map((m, i) => {
+            if (!m) return `<div class="picker-slot-indicator" style="border-color:#555"><div style="font-size:9px;color:#555">${i===0?'起手':i===1?'承接':'收招'}</div></div>`;
+            return `<div class="picker-slot-indicator filled" style="border-color:${m.type==='xu'?'#9B59B6':m.type==='shi'?'#E67E22':'#3498DB'}">
+                <div class="slot-icon">${m.icon}</div><div style="font-size:8px;color:#888">${m.name}</div></div>`;
+        }).join('');
+
+        renderMoveList();
+    }
+
+    function renderMoveList() {
+        const body = document.getElementById('pickerBody');
+        const owned = G.ownedMoves;
+        const allMoves = ALL_MOVES.filter(m => owned.includes(m.id));
+        
+        const grouped = { xu: [], shi: [], jia: [] };
+        allMoves.forEach(m => grouped[m.type].push(m));
+
+        const typeNames = { xu: '☠️ 虚(克实)', shi: '⚔️ 实(克架)', jia: '🛡️ 架(克虚)' };
+        const typeCls = { xu: 'xu', shi: 'shi', jia: 'jia' };
+
+        body.innerHTML = ['xu', 'shi', 'jia'].map(t => `
+            <div class="move-group">
+                <div class="move-group-title ${t}">${typeNames[t]}</div>
+                <div class="move-list">
+                    ${grouped[t].map(m => {
+                        const selected = G.combo[G.currentSlot]?.id === m.id;
+                        return `<div class="move-card ${typeCls[t]} ${selected ? 'selected' : ''}" onclick="selectMove('${m.id}')">
+                            <div class="move-icon">${m.icon}</div>
+                            <div class="move-name">${m.name}</div>
+                            <div class="move-type">${m.pos === 'start' ? '起手' : m.pos === 'mid' ? '承接' : '收招'}</div>
+                            <div class="move-dmg">伤:${Math.floor(m.atk*100)}%</div>
+                            <div class="move-cost">耗:${m.cost}气</div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function selectMove(id) {
+        const m = ALL_MOVES.find(x => x.id === id);
+        if (!m) return;
+        G.combo[G.currentSlot] = m;
+        renderMoveList();
+        closeMovePicker();
+    }
+
+    function closeMovePicker() {
+        document.getElementById('movePicker').style.display = 'none';
+        renderCombo();
+        updatePreview();
+    }
+
+    // ==================== 事件 ====================
+    function triggerEvent() {
+        const ev = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+        showModal(ev.icon, ev.title, ev.desc, ev.choices);
+    }
+
+    function showModal(icon, title, desc, choices) {
+        document.getElementById('mIcon').textContent = icon;
+        document.getElementById('mTitle').textContent = title;
+        document.getElementById('mDesc').textContent = desc;
+        const cEl = document.getElementById('mChoices');
+        cEl.innerHTML = '';
+        choices.forEach(c => {
+            const btn = document.createElement('div');
+            btn.className = 'choice-btn';
+            btn.innerHTML = `
+                <div class="choice-name">${c.name}</div>
+                <div class="choice-desc">${c.desc || ''}</div>
+                ${c.cost ? `<div class="choice-cost">${c.cost > 0 ? `消耗 ${c.cost} 银两` : c.cost < 0 ? `消耗 ${Math.abs(c.cost)} 银两 + 额外奖励` : ''}</div>` : ''}
+            `;
+            btn.onclick = () => {
+                if (c.cost > 0 && G.gold < c.cost) { showFB('银两不足！', 'fail'); return; }
+                if (c.cost === 'pills' && G.pills.length < 1) { showFB('丹药不足！', 'fail'); return; }
+                c.effect(G);
+                renderBattle();
+                hideModal();
+            };
+            cEl.appendChild(btn);
+        });
+        document.getElementById('modal').style.display = 'flex';
+    }
+
+    function hideModal() {
+        document.getElementById('modal').style.display = 'none';
+    }
+
+    function showFB(text, type) {
+        const el = document.getElementById('feedback');
+        el.innerHTML = `<div class="fb-text ${type}">${text}</div>`;
+        setTimeout(() => { if (el) el.innerHTML = ''; }, 2500);
+    }
+
+    function addLog(text, type = 'info') {
+        const log = document.getElementById('battleLog');
+        const item = document.createElement('div');
+        item.className = `log-item ${type}`;
+        item.textContent = `[${G.turn}] ${text}`;
+        log.insertBefore(item, log.firstChild);
+        while (log.children.length > 40) log.removeChild(log.lastChild);
+    }
+
+    // ==================== 启动 ====================
+    initG();
+    loadPermanent();
+    updateMain();
+    </script>
+</body>
+</html>

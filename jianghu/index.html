@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>江湖残卷 - 武侠Roguelike</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: #0d0d0d; color: #e8d5b0;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  touch-action: manipulation;
+}
+
+/* ========== 屏幕管理 ========== */
+.screen { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; flex-direction: column; overflow: hidden; }
+.screen.active { display: flex; }
+
+/* ========== 标题画面 ========== */
+#screenTitle {
+  background: linear-gradient(180deg, #1a1208 0%, #0a0a0a 100%);
+  align-items: center; justify-content: center;
+}
+.title-bg {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 700"><text x="200" y="350" font-size="200" text-anchor="middle" fill="rgba(200,150,80,0.03)" font-family="serif">剑</text></svg>') center/60% no-repeat;
+}
+.title-content { position: relative; z-index: 1; text-align: center; }
+.title-content h1 {
+  font-size: 2.5em; color: #c8a96e;
+  text-shadow: 0 0 20px rgba(200,169,110,0.5), 0 2px 4px rgba(0,0,0,0.8);
+  letter-spacing: 0.15em; margin-bottom: 0.2em;
+  font-family: "SimSun", "STSong", serif;
+}
+.title-content .subtitle {
+  font-size: 0.85em; color: #8a7a5a; letter-spacing: 0.3em; margin-bottom: 2em;
+}
+.btn-title {
+  width: 200px; height: 48px; margin: 8px auto;
+  background: linear-gradient(135deg, #3a2a1a 0%, #2a1a0a 100%);
+  border: 1px solid #6a5040; border-radius: 4px;
+  color: #c8a96e; font-size: 1.1em; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-title:hover { background: linear-gradient(135deg, #4a3a2a 0%, #3a2a1a 100%); border-color: #c8a96e; }
+
+/* ========== 战斗画面 ========== */
+#screenBattle { background: #0f0f0f; }
+
+.battle-header {
+  height: 50px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px; background: #1a1a1a; border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+.battle-header .wave-info { font-size: 0.9em; color: #c8a96e; font-weight: bold; }
+.battle-header .chapter-info { font-size: 0.75em; color: #6a5a3a; }
+
+.battle-area {
+  flex: 1; display: flex; flex-direction: column;
+  overflow: hidden; position: relative;
+}
+
+/* 六宫格战场 */
+.grid-container {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 8px 8px 4px 8px;
+}
+.grid-6 {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 4px; width: 100%; max-width: 280px; aspect-ratio: 3/2;
+}
+.grid-cell {
+  background: #1a1a1a; border: 1px solid #2a2a2a;
+  border-radius: 4px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s;
+  position: relative; overflow: hidden;
+}
+.grid-cell:hover { border-color: #4a4a4a; background: #222; }
+.grid-cell.ally-zone { border-left: 2px solid #3a5a3a; }
+.grid-cell.enemy-zone { border-right: 2px solid #5a3a3a; }
+.grid-cell.attack-target { border-color: #c84a3a; background: rgba(200,74,58,0.2); }
+
+.occupant {
+  width: 100%; height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 4px;
+}
+.occupant .icon { font-size: 1.8em; }
+.occupant .hp-bar {
+  width: 80%; height: 4px; background: #333; border-radius: 2px; margin-top: 2px;
+}
+.occupant .hp-fill { height: 100%; background: #3a6a3a; border-radius: 2px; transition: width 0.3s; }
+.occupant .qi-bar {
+  width: 80%; height: 3px; background: #333; border-radius: 2px; margin-top: 1px;
+}
+.occupant .qi-fill { height: 100%; background: #4a6a8a; border-radius: 2px; transition: width 0.3s; }
+.occupant .name { font-size: 0.6em; color: #8a7a5a; margin-top: 1px; text-align: center; overflow: hidden; white-space: nowrap; max-width: 95%; text-overflow: ellipsis; }
+
+.zone-label {
+  position: absolute; font-size: 0.5em; color: rgba(100,80,60,0.5);
+  top: 2px; left: 4px;
+}
+
+/* 技能范围提示 */
+.skill-range-overlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(200,74,58,0.15); border: 1px solid rgba(200,74,58,0.5);
+  border-radius: 4px; pointer-events: none; z-index: 5;
+}
+
+/* 战斗日志 */
+.log-area {
+  height: 60px; background: #111; border-top: 1px solid #2a2a2a;
+  padding: 4px 8px; overflow-y: auto;
+}
+.log-line { font-size: 0.7em; color: #6a6a6a; line-height: 1.4; }
+.log-line.dmg { color: #c84a3a; }
+.log-line.heal { color: #4a8a4a; }
+.log-line.info { color: #8a7a5a; }
+
+/* 行动面板 */
+.action-panel {
+  height: 60px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 8px; background: #151515; border-top: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+.btn-action {
+  padding: 8px 16px; border-radius: 4px; border: 1px solid #4a4a4a;
+  background: #1a1a1a; color: #c8a96e; font-size: 0.85em; cursor: pointer;
+}
+.btn-action:hover { background: #222; border-color: #c8a96e; }
+.btn-action:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-action.primary { border-color: #6a8a5a; }
+.btn-action.primary:hover { border-color: #8aba7a; }
+.btn-action.danger { border-color: #8a4a3a; }
+.btn-action.danger:hover { border-color: #ca6a5a; }
+
+.turn-info { font-size: 0.85em; color: #6a5a3a; text-align: center; }
+
+/* ========== 武者面板 ========== */
+.team-panel {
+  height: 80px; display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px; background: #151515; border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0; overflow-x: auto;
+}
+.team-member {
+  min-width: 60px; flex-shrink: 0; background: #1a1a1a;
+  border: 1px solid #2a2a2a; border-radius: 4px; padding: 4px;
+  cursor: pointer; transition: all 0.15s;
+}
+.team-member.active { border-color: #6a8a5a; background: #1a2010; }
+.team-member.dead { opacity: 0.4; }
+.team-member .mini-icon { font-size: 1.2em; text-align: center; }
+.team-member .mini-hp { font-size: 0.6em; color: #6a6a6a; text-align: center; margin-top: 2px; }
+.team-member .mini-qi { font-size: 0.55em; color: #4a5a6a; text-align: center; }
+
+/* ========== 技能选择 ========== */
+.skill-selector {
+  position: absolute; bottom: 60px; left: 0; right: 0;
+  background: #151515; border-top: 1px solid #3a3a3a;
+  padding: 8px; z-index: 10;
+}
+.skill-selector.hidden { display: none; }
+.skill-list { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.skill-item {
+  min-width: 70px; padding: 6px 8px; border-radius: 4px;
+  background: #1a1a1a; border: 1px solid #3a3a3a; text-align: center;
+  cursor: pointer; transition: all 0.15s;
+}
+.skill-item:hover { border-color: #6a5a3a; background: #222; }
+.skill-item .skill-icon { font-size: 1.2em; }
+.skill-item .skill-name { font-size: 0.65em; color: #8a7a5a; margin-top: 2px; }
+.skill-item .skill-cost { font-size: 0.6em; color: #4a5a8a; }
+.skill-item.selected { border-color: #c8a96e; background: #2a2010; }
+
+/* ========== 侧滑面板 ========== */
+.side-panel {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 85%;
+  background: #111; border-left: 1px solid #3a3a3a;
+  transform: translateX(100%); transition: transform 0.25s ease;
+  z-index: 20; overflow-y: auto;
+}
+.side-panel.open { transform: translateX(0); }
+.panel-header { padding: 12px; border-bottom: 1px solid #2a2a2a; display: flex; justify-content: space-between; align-items: center; }
+.panel-header h3 { color: #c8a96e; font-size: 1em; }
+.panel-close {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid #4a4a4a;
+  background: transparent; color: #6a6a6a; font-size: 1em; cursor: pointer;
+}
+.panel-section { padding: 12px; border-bottom: 1px solid #2a2a2a; }
+.panel-section h4 { color: #8a7a5a; font-size: 0.85em; margin-bottom: 8px; }
+.stat-row { display: flex; justify-content: space-between; font-size: 0.85em; padding: 3px 0; }
+.stat-row span:first-child { color: #6a6a6a; }
+.stat-row span:last-child { color: #c8a96e; }
+
+/* ========== 弹窗 ========== */
+.modal-overlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center;
+  z-index: 50;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+  background: #1a1510; border: 1px solid #5a4a2a;
+  border-radius: 8px; padding: 20px; max-width: 300px; width: 90%;
+  text-align: center;
+}
+.modal-icon { font-size: 2.5em; margin-bottom: 8px; }
+.modal-title { color: #c8a96e; font-size: 1.2em; margin-bottom: 6px; }
+.modal-desc { color: #8a7a5a; font-size: 0.85em; line-height: 1.5; margin-bottom: 16px; }
+.modal-btn {
+  display: block; width: 100%; padding: 10px; margin: 6px auto;
+  border-radius: 4px; border: 1px solid #5a4a2a;
+  background: #2a2010; color: #c8a96e; font-size: 0.9em; cursor: pointer;
+}
+.modal-btn:hover { background: #3a3020; border-color: #c8a96e; }
+.modal-btn.primary { border-color: #6a8a5a; background: #1a2010; }
+.modal-btn.primary:hover { border-color: #8aba7a; }
+
+/* ========== 章节结算 ========== */
+#screenResult {
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a1208 100%);
+  align-items: center; justify-content: center;
+}
+.result-box { text-align: center; max-width: 280px; }
+.result-box h2 { font-size: 1.8em; color: #c8a96e; margin-bottom: 16px; }
+.stat-summary { background: #1a1a1a; border: 1px solid #3a3020; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.stat-row2 { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #2a2a2a; }
+.stat-row2:last-child { border-bottom: none; }
+
+/* ========== 飘字 ========== */
+.fb-toast {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 8px 16px; border-radius: 4px;
+  font-size: 0.9em; z-index: 60;
+  animation: floatUp 0.8s ease-out forwards; pointer-events: none;
+}
+.fb-toast.dmg { background: rgba(200,74,58,0.9); color: #fff; }
+.fb-toast.heal { background: rgba(74,138,74,0.9); color: #fff; }
+.fb-toast.info { background: rgba(90,74,58,0.9); color: #e8d5b0; }
+.fb-toast.special { background: rgba(200,169,110,0.9); color: #1a1208; }
+@keyframes floatUp {
+  0% { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, -120%); }
+}
+
+/* ========== 角色选择 ========== */
+#screenClassSelect {
+  background: linear-gradient(180deg, #1a1208 0%, #0a0a0a 100%);
+  align-items: center; justify-content: center; padding: 16px;
+}
+.class-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+  width: 100%; max-width: 340px;
+}
+.class-card {
+  background: #1a1a1a; border: 1px solid #3a3020;
+  border-radius: 6px; padding: 12px; cursor: pointer;
+  transition: all 0.2s; text-align: center;
+}
+.class-card.sel { border-color: #c8a96e; background: #2a2010; }
+.class-card .cls-icon { font-size: 2em; margin-bottom: 4px; }
+.class-card .cls-name { color: #c8a96e; font-size: 0.95em; margin-bottom: 2px; }
+.class-card .cls-desc { color: #6a6a6a; font-size: 0.7em; }
+.class-card .cls-stats { display: flex; justify-content: space-around; margin-top: 6px; font-size: 0.65em; color: #5a5a5a; }
+
+/* 遮罩层 */
+.overlay-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 15; display: none; }
+.overlay-bg.show { display: block; }
+</style>
+</head>
+<body>
+
+<!-- ========== 标题画面 ========== -->
+<div id="screenTitle" class="screen active">
+  <div class="title-bg"></div>
+  <div class="title-content">
+    <h1>江湖残卷</h1>
+    <div class="subtitle">武侠Roguelike</div>
+    <button class="btn-title" onclick="showScreen('screenClassSelect')">开始江湖</button>
+    <button class="btn-title" onclick="showHelp()" style="margin-top:12px;background:transparent;border:none;font-size:0.8em;color:#6a6a6a;">游戏说明</button>
+    <div style="margin-top:30px;font-size:0.7em;color:#4a4a4a;">
+      试炼: <span id="stRuns">0</span> | 通关: <span id="stWins">0</span>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 职业选择 ========== -->
+<div id="screenClassSelect" class="screen">
+  <div style="padding:16px;text-align:center;">
+    <h2 style="color:#c8a96e;margin-bottom:4px;">选择你的武者</h2>
+    <div style="font-size:0.75em;color:#6a6a6a;margin-bottom:16px;">击败章节可永久解锁更多武者</div>
+    <div class="class-grid" id="classList"></div>
+    <button class="btn-action primary" style="margin-top:16px;width:200px;" onclick="confirmClass()">确认入江湖</button>
+  </div>
+</div>
+
+<!-- ========== 战斗画面 ========== -->
+<div id="screenBattle" class="screen">
+  <!-- 顶部状态栏 -->
+  <div class="battle-header">
+    <div class="wave-info" id="waveInfo">第1波</div>
+    <div class="chapter-info" id="chapterInfo">第一章 荒村夜雨</div>
+    <div style="font-size:0.75em;color:#6a6a6a;" id="turnInfo">回合1</div>
+  </div>
+
+  <!-- 武者队伍 -->
+  <div class="team-panel" id="teamPanel"></div>
+
+  <!-- 战场 -->
+  <div class="battle-area" id="battleArea">
+    <div class="grid-container">
+      <div class="grid-6" id="grid6"></div>
+    </div>
+    <!-- 技能选择器 -->
+    <div class="skill-selector hidden" id="skillSelector">
+      <div style="font-size:0.7em;color:#6a5a3a;margin-bottom:6px;">选择技能</div>
+      <div class="skill-list" id="skillList"></div>
+    </div>
+  </div>
+
+  <!-- 行动面板 -->
+  <div class="action-panel">
+    <button class="btn-action" id="btnEndTurn" onclick="endTurn()">结束回合</button>
+    <div class="turn-info" id="actionHint">选择武者再选择技能</div>
+    <button class="btn-action" id="btnMenu" onclick="openMenu()">☰</button>
+  </div>
+
+  <!-- 战斗日志 -->
+  <div class="log-area" id="logArea"></div>
+
+  <!-- 遮罩 -->
+  <div class="overlay-bg" id="overlayBg" onclick="closeAll()"></div>
+
+  <!-- 侧滑面板 -->
+  <div class="side-panel" id="sidePanel">
+    <div class="panel-header">
+      <h3 id="panelTitle">武者详情</h3>
+      <button class="panel-close" onclick="closeAll()">✕</button>
+    </div>
+    <div class="panel-section" id="panelBody"></div>
+    <div class="panel-section" id="panelActions" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- ========== 章节结算 ========== -->
+<div id="screenResult" class="screen">
+  <div class="result-box" id="resultBox">
+    <h2 id="resultTitle">章节胜利</h2>
+    <div class="stat-summary" id="resultStats"></div>
+    <button class="modal-btn primary" id="resultBtn" onclick="resultBtnAction()">继续</button>
+  </div>
+</div>
+
+<script>
+// ================================================================
+//  游戏数据
+// ================================================================
+
+const CHAPTERS = [
+  { id: 1, name: '荒村夜雨', waves: 3, enemies: [[{type:'流寇',count:2}],[{type:'山贼',count:3}],[{type:'山贼头目',count:1},{type:'流寇',count:1}]] },
+  { id: 2, name: '虎口拔牙', waves: 3, enemies: [[{type:'虎贲卫',count:2}],[{type:'江湖散人',count:3}],[{type:'高手',count:1},{type:'虎贲卫',count:1}]] },
+  { id: 3, name: '清风寨殇', waves: 3, enemies: [[{type:'寨丁',count:3}],[{type:'寨丁',count:2},{type:'弓手',count:1}],[{type:'寨主',count:1},{type:'寨丁',count:1}]] },
+  { id: 4, name: '少林迷踪', waves: 3, enemies: [[{type:'少林武僧',count:2}],[{type:'少林罗汉',count:2},{type:'少林武僧',count:1}],[{type:'罗汉堂首座',count:1}]] },
+  { id: 5, name: '武当问心', waves: 3, enemies: [[{type:'武当弟子',count:2}],[{type:'武当剑客',count:2},{type:'武当弟子',count:1}],[{type:'武当掌门',count:1}]] },
+];
+
+const ENEMY_TEMPLATES = {
+  '流寇':    { hp: 35, atk: 6, def: 3, atkPattern:'single', icon:'⚔️', skills: [{name:'劈砍',dmg:6,range:'single'}] },
+  '山贼':    { hp: 45, atk: 8, def: 4, atkPattern:'single', icon:'🪓', skills: [{name:'劈砍',dmg:8,range:'single'}] },
+  '山贼头目':{ hp: 80, atk: 12, def: 6, atkPattern:'single', icon:'💀', skills: [{name:'重劈',dmg:12,range:'single'},{name:'横扫',dmg:8,range:'adjacent'}] },
+  '虎贲卫':  { hp: 55, atk: 10, def: 8, atkPattern:'single', icon:'🛡️', skills: [{name:'刺击',dmg:10,range:'single'},{name:'盾击',dmg:5,range:'single',stun:1}] },
+  '江湖散人':{ hp: 40, atk: 14, def: 3, atkPattern:'random', icon:'🎭', skills: [{name:'暗器',dmg:8,range:'single',ranged:true},{name:'暗器',dmg:8,range:'single',ranged:true}] },
+  '高手':    { hp: 90, atk: 16, def: 8, atkPattern:'single', icon:'⚡', skills: [{name:'破空斩',dmg:16,range:'single',pierce:true},{name:'剑气',dmg:10,range:'single',ranged:true}] },
+  '寨丁':    { hp: 40, atk: 7, def: 4, atkPattern:'single', icon:'🔪', skills: [{name:'砍',dmg:7,range:'single'}] },
+  '弓手':    { hp: 30, atk: 12, def: 2, atkPattern:'ranged', icon:'🏹', skills: [{name:'射箭',dmg:12,range:'single',ranged:true}] },
+  '寨主':    { hp: 100, atk: 14, def: 10, atkPattern:'single', icon:'🔥', skills: [{name:'烈焰刀',dmg:14,range:'single'},{name:'旋风斩',dmg:10,range:'adjacent'},{name:'怒吼',dmg:0,range:'all',buff:'atk_up'}] },
+  '少林武僧':{ hp: 50, atk: 10, def: 8, atkPattern:'single', icon:'🙏', skills: [{name:'罗汉拳',dmg:10,range:'single'}] },
+  '少林罗汉':{ hp: 70, atk: 12, def: 12, atkPattern:'single', icon:'💪', skills: [{name:'铁砂掌',dmg:12,range:'single'},{name:'护体',dmg:0,range:'self',shield:15}] },
+  '罗汉堂首座':{ hp: 150, atk: 18, def: 15, atkPattern:'single', icon:'☸️', skills: [{name:'金刚指',dmg:18,range:'single',pierce:true},{name:'狮子吼',dmg:12,range:'all'},{name:'金钟罩',dmg:0,range:'self',shield:30}] },
+  '武当弟子':{ hp: 45, atk: 8, def: 6, atkPattern:'single', icon:'⚔️', skills: [{name:'太极剑',dmg:8,range:'single'}] },
+  '武当剑客':{ hp: 65, atk: 12, def: 8, atkPattern:'single', icon:'🗡️', skills: [{name:'武当剑法',dmg:12,range:'single'},{name:'八卦剑',dmg:8,range:'adjacent'}] },
+  '武当掌门':{ hp: 200, atk: 20, def: 12, atkPattern:'all', icon:'🌟', skills: [{name:'太极拳',dmg:15,range:'single'},{name:'真武七截剑',dmg:20,range:'all'},{name:'阴阳之道',dmg:0,range:'self',heal:40,shield:20}] },
+};
+
+// 武者类型
+const WARRIOR_TYPES = [
+  {
+    id: 'sword', name: '逍遥剑客', icon: '🗡️', desc: '均衡全能',
+    hp: 100, atk: 12, def: 6, speed: 10, maxEnergy: 100,
+    skills: [
+      { name: '起手式', icon: '→', cost: 0, desc: '普通攻击', type: 'attack', dmg: 12, range: 'adjacent', targetEnemy: true },
+      { name: '破风斩', icon: '⚡', cost: 30, desc: '高伤害单体', type: 'attack', dmg: 28, range: 'adjacent', targetEnemy: true },
+      { name: '万剑归宗', icon: '🌪️', cost: 60, desc: '极高伤害', type: 'attack', dmg: 50, range: 'adjacent', targetEnemy: true, cooldown: 3 },
+      { name: '气宗心法', icon: '💨', cost: 20, desc: '回复气力', type: 'self', effect: 'energy_regen', value: 30 },
+    ],
+    passive: '剑意流转：攻击后回复10%气力',
+  },
+  {
+    id: 'blade', name: '狂刀武圣', icon: '🔪', desc: '高攻低防',
+    hp: 80, atk: 18, def: 4, speed: 8, maxEnergy: 100,
+    skills: [
+      { name: '拔刀斩', icon: '→', cost: 0, desc: '普通攻击', type: 'attack', dmg: 18, range: 'adjacent', targetEnemy: true },
+      { name: '狂龙斩', icon: '🐉', cost: 25, desc: '高伤害', type: 'attack', dmg: 35, range: 'adjacent', targetEnemy: true },
+      { name: '血战八方', icon: '🔥', cost: 50, desc: '对所有敌人', type: 'attack', dmg: 22, range: 'all', targetEnemy: true },
+      { name: '嗜血', icon: '🩸', cost: 15, desc: '吸血', type: 'self', effect: 'lifesteal', value: 30 },
+    ],
+    passive: '嗜血本能：每次攻击回复10%伤害值生命',
+  },
+  {
+    id: 'monk', name: '铁头僧', icon: '👊', desc: '肉盾反击',
+    hp: 140, atk: 8, def: 14, speed: 6, maxEnergy: 100,
+    skills: [
+      { name: '罗汉拳', icon: '→', cost: 0, desc: '普通攻击', type: 'attack', dmg: 10, range: 'adjacent', targetEnemy: true },
+      { name: '铁山靠', icon: '🛡️', cost: 20, desc: '格挡+反击', type: 'defense', shield: 25, reflect: 15, range: 'self' },
+      { name: '金钟罩', icon: '🔔', cost: 40, desc: '大量护盾', type: 'defense', shield: 50, range: 'self', cooldown: 3 },
+      { name: '舍身决', icon: '💥', cost: 30, desc: '扣血反伤', type: 'attack', dmg: 40, range: 'adjacent', targetEnemy: true, selfDamage: 20 },
+    ],
+    passive: '铁布衫：受伤减少15%',
+  },
+];
+
+// 永久数据
+let PERM = { runs: 0, wins: 0, bestChapter: 0, unlockedWarriors: ['sword'] };
+
+// ================================================================
+//  游戏状态
+// ================================================================
+
+let G = {};
+
+function initG() {
+  G = {
+    phase: 'select',
+    chapter: 1,
+    wave: 1,
+    turn: 1,
+    allies: [],      // 我方武者
+    enemies: [],     // 敌人
+    selectedAlly: null,  // 选中的我方武者
+    selectedSkill: null, // 选中的技能
+    actionLog: [],
+  };
+}
+
+// ================================================================
+//  工具函数
+// ================================================================
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showFB(text, type = 'info', delay = 800) {
+  const el = document.createElement('div');
+  el.className = `fb-toast ${type}`;
+  el.textContent = text;
+  el.style.top = '35%';
+  document.getElementById('screenBattle').appendChild(el);
+  setTimeout(() => el.remove(), delay);
+}
+
+function log(text, type = '') {
+  const area = document.getElementById('logArea');
+  const line = document.createElement('div');
+  line.className = `log-line ${type}`;
+  line.textContent = text;
+  area.appendChild(line);
+  area.scrollTop = area.scrollHeight;
+  G.actionLog.push({ text, type });
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+// ================================================================
+//  存储
+// ================================================================
+
+function loadData() {
+  try {
+    const s = localStorage.getItem('jianghu_v1');
+    if (s) PERM = JSON.parse(s);
+  } catch(e) {}
+  document.getElementById('stRuns').textContent = PERM.runs;
+  document.getElementById('stWins').textContent = PERM.wins;
+}
+
+function saveData() {
+  localStorage.setItem('jianghu_v1', JSON.stringify(PERM));
+}
+
+// ================================================================
+//  职业选择
+// ================================================================
+
+let selWarriorType = 'sword';
+
+function showClassSelect() {
+  const list = document.getElementById('classList');
+  list.innerHTML = '';
+  const unlocked = PERM.unlockedWarriors || ['sword'];
+  
+  WARRIOR_TYPES.forEach(w => {
+    const locked = !unlocked.includes(w.id);
+    const card = document.createElement('div');
+    card.className = 'class-card' + (w.id === selWarriorType ? ' sel' : '');
+    card.innerHTML = `
+      <div class="cls-icon">${locked ? '🔒' : w.icon}</div>
+      <div class="cls-name">${locked ? '???' : w.name}</div>
+      <div class="cls-desc">${locked ? '通关章节解锁' : w.desc}</div>
+      <div class="cls-stats">
+        <span>❤️${w.hp}</span><span>⚔️${w.atk}</span><span>🛡️${w.def}</span>
+      </div>
+    `;
+    if (!locked) card.onclick = () => {
+      document.querySelectorAll('.class-card').forEach(c => c.classList.remove('sel'));
+      card.classList.add('sel');
+      selWarriorType = w.id;
+    };
+    list.appendChild(card);
+  });
+  showScreen('screenClassSelect');
+}
+
+function confirmClass() {
+  PERM.runs++;
+  saveData();
+  document.getElementById('stRuns').textContent = PERM.runs;
+  
+  const wt = WARRIOR_TYPES.find(w => w.id === selWarriorType);
+  
+  // 初始化武者（默认1个）
+  G.allies = [{
+    ...wt,
+    uid: 'ally_0',
+    curHp: wt.hp,
+    maxHp: wt.hp,
+    energy: 0,
+    pos: 3, // 左下角
+    dead: false,
+    cooldowns: {},
+  }];
+  
+  // 随机分配位置给盟友（区域在下排 3,4,5）
+  showScreen('screenBattle');
+  startChapter();
+}
+
+function startChapter() {
+  const ch = CHAPTERS[G.chapter - 1];
+  document.getElementById('chapterInfo').textContent = `第${G.chapter}章 ${ch.name}`;
+  G.wave = 1;
+  G.turn = 1;
+  spawnWave();
+  renderAll();
+  log(`进入${ch.name}...`, 'info');
+  showFB(`第${G.chapter}章 ${ch.name}`, 'special', 1200);
+}
+
+function spawnWave() {
+  const ch = CHAPTERS[G.chapter - 1];
+  const waveData = ch.enemies[G.wave - 1];
+  
+  // 清除旧敌人
+  G.enemies = [];
+  
+  let posIdx = 0;
+  const enemyPositions = [0, 1, 2]; // 上排
+  
+  waveData.forEach(wd => {
+    for (let i = 0; i < wd.count; i++) {
+      const tmpl = ENEMY_TEMPLATES[wd.type];
+      G.enemies.push({
+        uid: 'enemy_' + Date.now() + '_' + posIdx,
+        name: wd.type,
+        icon: tmpl.icon,
+        hp: tmpl.hp,
+        maxHp: tmpl.hp,
+        atk: tmpl.atk,
+        def: tmpl.def,
+        pos: enemyPositions[posIdx % enemyPositions.length],
+        skills: tmpl.skills,
+        dead: false,
+        buffs: [],
+      });
+      posIdx++;
+    }
+  });
+  
+  document.getElementById('waveInfo').textContent = `第${G.wave}波 (${G.wave}/${ch.waves})`;
+  document.getElementById('turnInfo').textContent = `回合${G.turn}`;
+  
+  // 盟友重新随机分布
+  G.allies.forEach((a, i) => {
+    a.pos = 3 + (i % 3);
+  });
+  
+  log(`第${G.wave}波敌人来袭！`, 'info');
+  renderAll();
+}
+
+// ================================================================
+//  回合系统
+// ================================================================
+
+function endTurn() {
+  // 盟友气力 +15/回合
+  G.allies.forEach(a => {
+    if (!a.dead) {
+      a.energy = Math.min(a.maxEnergy, a.energy + 15);
+      // 减少冷却
+      Object.keys(a.cooldowns).forEach(k => {
+        if (a.cooldowns[k] > 0) a.cooldowns[k]--;
+      });
+    }
+  });
+  
+  // 敌人行动
+  enemyAction();
+  
+  // 回合结束，处理毒/燃烧等DOT
+  processDOT();
+  
+  // 回合++
+  G.turn++;
+  document.getElementById('turnInfo').textContent = `回合${G.turn}`;
+  
+  G.selectedAlly = null;
+  G.selectedSkill = null;
+  renderAll();
+}
+
+function enemyAction() {
+  G.enemies.forEach(enemy => {
+    if (enemy.dead) return;
+    
+    // 选择技能
+    const available = enemy.skills;
+    const skill = available[Math.floor(Math.random() * available.length)];
+    
+    log(`${enemy.name} 发动「${skill.name}」`, 'info');
+    
+    if (skill.range === 'self') {
+      if (skill.shield) {
+        enemy.shield = (enemy.shield || 0) + skill.shield;
+        log(`  → ${enemy.name} 获得 ${skill.shield} 护盾`, 'heal');
+      }
+      if (skill.heal) {
+        enemy.hp = Math.min(enemy.maxHp, enemy.hp + skill.heal);
+        log(`  → ${enemy.name} 恢复 ${skill.heal} HP`, 'heal');
+      }
+      return;
+    }
+    
+    // 范围判断
+    if (skill.range === 'all') {
+      G.allies.forEach(ally => {
+        if (!ally.dead) dealDamageToAlly(ally, skill.dmg || 0, enemy, skill);
+      });
+    } else if (skill.range === 'adjacent') {
+      // 找一个最近的盟友
+      const target = findNearestAlly(enemy.pos);
+      if (target) dealDamageToAlly(target, skill.dmg, enemy, skill);
+    } else {
+      const target = findNearestAlly(enemy.pos);
+      if (target) dealDamageToAlly(target, skill.dmg, enemy, skill);
+    }
+  });
+}
+
+function dealDamageToAlly(ally, baseDmg, enemy, skill) {
+  let dmg = Math.max(1, baseDmg - ally.def * 0.5);
+  dmg = Math.floor(dmg);
+  
+  // 护盾先抵消
+  if (ally.shield && ally.shield > 0) {
+    if (ally.shield >= dmg) {
+      ally.shield -= dmg;
+      log(`  → ${ally.name} 护盾抵消 ${dmg}`, 'info');
+      dmg = 0;
+    } else {
+      dmg -= ally.shield;
+      ally.shield = 0;
+    }
+  }
+  
+  ally.curHp = Math.max(0, ally.curHp - dmg);
+  log(`  → ${ally.name} 受到 ${dmg} 伤害`, 'dmg');
+  showFB(`-${dmg}`, 'dmg');
+  
+  if (ally.curHp <= 0) {
+    ally.dead = true;
+    log(`${ally.name} 阵亡！`, 'dmg');
+  }
+}
+
+function findNearestAlly(enemyPos) {
+  const alive = G.allies.filter(a => !a.dead);
+  if (alive.length === 0) return null;
+  
+  // 找距离最近的
+  let nearest = alive[0];
+  let minDist = Math.abs(nearest.pos - enemyPos);
+  alive.forEach(a => {
+    const d = Math.abs(a.pos - enemyPos);
+    if (d < minDist) { minDist = d; nearest = a; }
+  });
+  return nearest;
+}
+
+function processDOT() {
+  // 暂时不实现DOT，简化
+}
+
+// ================================================================
+//  武者选择 & 技能选择
+// ================================================================
+
+function selectAlly(uid) {
+  const ally = G.allies.find(a => a.uid === uid);
+  if (!ally || ally.dead) return;
+  
+  G.selectedAlly = ally;
+  G.selectedSkill = null;
+  
+  // 显示技能
+  showSkillSelector(ally);
+  renderAll();
+}
+
+function showSkillSelector(ally) {
+  const sel = document.getElementById('skillSelector');
+  const list = document.getElementById('skillList');
+  list.innerHTML = '';
+  
+  ally.skills.forEach((sk, i) => {
+    const cd = ally.cooldowns[sk.name] || 0;
+    const canUse = ally.energy >= sk.cost && cd === 0 && !ally.dead;
+    
+    const item = document.createElement('div');
+    item.className = 'skill-item';
+    item.innerHTML = `
+      <div class="skill-icon">${sk.icon}</div>
+      <div class="skill-name">${sk.name}</div>
+      <div class="skill-cost">${sk.cost}气${cd > 0 ? ` [${cd}回]` : ''}</div>
+    `;
+    if (canUse) {
+      item.onclick = () => selectSkill(i);
+    }
+    item.style.opacity = canUse ? '1' : '0.4';
+    list.appendChild(item);
+  });
+  
+  sel.classList.remove('hidden');
+  document.getElementById('actionHint').textContent = `已选${ally.name}，选择技能`;
+}
+
+function selectSkill(idx) {
+  const ally = G.selectedAlly;
+  if (!ally) return;
+  
+  const sk = ally.skills[idx];
+  const cd = ally.cooldowns[sk.name] || 0;
+  
+  if (ally.energy < sk.cost) {
+    showFB('气力不足！', 'dmg');
+    return;
+  }
+  if (cd > 0) {
+    showFB('冷却中...', 'info');
+    return;
+  }
+  
+  G.selectedSkill = idx;
+  
+  // 更新技能UI
+  document.querySelectorAll('.skill-item').forEach((it, i) => {
+    it.classList.toggle('selected', i === idx);
+  });
+  
+  if (sk.type === 'attack' && sk.targetEnemy) {
+    // 标记可以攻击的敌人格
+    document.getElementById('actionHint').textContent = `选择目标施放「${sk.name}」`;
+    highlightAttackTargets();
+  } else {
+    // 立即执行
+    executeSkill(ally, sk, null);
+    renderAll();
+  }
+}
+
+function highlightAttackTargets() {
+  // 所有敌人位置高亮
+  renderAll();
+  G.enemies.forEach(e => {
+    if (!e.dead) {
+      const cell = document.querySelector(`[data-pos="${e.pos}"]`);
+      if (cell) cell.classList.add('attack-target');
+    }
+  });
+}
+
+function executeSkill(ally, sk, targetPos) {
+  ally.energy -= sk.cost;
+  
+  // 冷却
+  if (sk.cooldown) {
+    ally.cooldowns[sk.name] = sk.cooldown;
+  }
+  
+  log(`${ally.name} 使用「${sk.name}」`, 'info');
+  
+  if (sk.type === 'attack') {
+    // 找目标
+    let target;
+    if (targetPos !== null) {
+      target = G.enemies.find(e => e.pos === targetPos && !e.dead);
+    } else {
+      target = G.enemies.find(e => !e.dead);
+    }
+    
+    if (!target) {
+      log('  → 无目标！', 'info');
+      return;
+    }
+    
+    // 计算伤害
+    let dmg = sk.dmg;
+    dmg += ally.atk - 12; // 基础加成
+    if (Math.random() < 0.15) {
+      dmg = Math.floor(dmg * 2);
+      log(`  → 💥暴击！`, 'dmg');
+    }
+    dmg = Math.max(1, dmg);
+    
+    target.hp = Math.max(0, target.hp - dmg);
+    log(`  → 对 ${target.name} 造成 ${dmg} 伤害`, 'dmg');
+    showFB(`-${dmg}`, 'dmg');
+    
+    if (target.hp <= 0) {
+      target.dead = true;
+      log(`${target.name} 阵亡！`, 'info');
+    }
+    
+    // 特殊效果
+    if (sk.effect === 'lifesteal') {
+      const heal = Math.floor(dmg * sk.value / 100);
+      ally.curHp = Math.min(ally.maxHp, ally.curHp + heal);
+      log(`  → 吸取 ${heal} HP`, 'heal');
+    }
+  }
+  
+  if (sk.type === 'defense') {
+    ally.shield = (ally.shield || 0) + sk.shield;
+    log(`  → 获得 ${sk.shield} 护盾`, 'heal');
+  }
+  
+  if (sk.type === 'self') {
+    if (sk.effect === 'energy_regen') {
+      ally.energy = Math.min(ally.maxEnergy, ally.energy + sk.value);
+      log(`  → 恢复 ${sk.value} 气力`, 'heal');
+    }
+  }
+  
+  // 被动：剑意流转
+  if (ally.id === 'sword' && sk.cost > 0) {
+    ally.energy = Math.min(ally.maxEnergy, ally.energy + 10);
+    log(`  → 剑意流转：+10气力`, 'info');
+  }
+  
+  G.selectedSkill = null;
+  
+  // 检查本波是否清空
+  checkWaveClear();
+  
+  renderAll();
+  closeSkillSelector();
+}
+
+// 点击格子
+function onGridClick(pos) {
+  if (G.selectedAlly && G.selectedSkill !== null) {
+    const ally = G.selectedAlly;
+    const sk = ally.skills[G.selectedSkill];
+    
+    if (sk.type === 'attack' && sk.targetEnemy) {
+      // 检查是否敌人在这里
+      const enemy = G.enemies.find(e => e.pos === pos && !e.dead);
+      if (enemy) {
+        executeSkill(ally, sk, pos);
+      } else {
+        showFB('这里没有敌人', 'info');
+      }
+    }
+  }
+}
+
+function closeSkillSelector() {
+  document.getElementById('skillSelector').classList.add('hidden');
+}
+
+// ================================================================
+//  波次结算
+// ================================================================
+
+function checkWaveClear() {
+  const allDead = G.enemies.every(e => e.dead);
+  if (!allDead) return;
+  
+  const ch = CHAPTERS[G.chapter - 1];
+  
+  if (G.wave < ch.waves) {
+    G.wave++;
+    showFB(`波次清除！进入第${G.wave}波`, 'heal', 1200);
+    log(`第${G.wave}波敌人出现...`, 'info');
+    setTimeout(() => spawnWave(), 800);
+  } else {
+    // 章节结束
+    chapterEnd();
+  }
+}
+
+function chapterEnd() {
+  const ch = CHAPTERS[G.chapter - 1];
+  
+  // 奖励
+  const gold = 30 + G.chapter * 10;
+  PERM.gold = (PERM.gold || 0) + gold;
+  PERM.bestChapter = Math.max(PERM.bestChapter, G.chapter);
+  
+  // 解锁新武者
+  let newUnlock = '';
+  if (G.chapter === 1 && !PERM.unlockedWarriors.includes('blade')) {
+    PERM.unlockedWarriors.push('blade');
+    newUnlock = '狂刀武圣';
+  }
+  if (G.chapter === 3 && !PERM.unlockedWarriors.includes('monk')) {
+    PERM.unlockedWarriors.push('monk');
+    newUnlock = newUnlock ? (newUnlock + '、铁头僧') : '铁头僧';
+  }
+  
+  saveData();
+  
+  showScreen('screenResult');
+  document.getElementById('resultTitle').textContent = `${ch.name} 通关！`;
+  document.getElementById('resultStats').innerHTML = `
+    <div class="stat-row2"><span>获得银两</span><span>+${gold}</span></div>
+    <div class="stat-row2"><span>当前银两</span><span>${PERM.gold}</span></div>
+    <div class="stat-row2"><span>试炼进度</span><span>${PERM.runs}次</span></div>
+    ${newUnlock ? `<div class="stat-row2"><span>解锁武者</span><span>${newUnlock}</span></div>` : ''}
+  `;
+  
+  if (G.chapter >= CHAPTERS.length) {
+    // 通关！
+    PERM.wins++;
+    saveData();
+    document.getElementById('resultTitle').textContent = '🏆 江湖通关！';
+    document.getElementById('resultBtn').textContent = '重新挑战';
+    document.getElementById('resultBtn').onclick = () => { PERM.runs++; saveData(); startGame(); };
+    return;
+  }
+  
+  document.getElementById('resultBtn').textContent = '继续下一章';
+  document.getElementById('resultBtn').onclick = () => {
+    G.chapter++;
+    showScreen('screenBattle');
+    startChapter();
+  };
+}
+
+function startGame() {
+  initG();
+  showClassSelect();
+}
+
+// ================================================================
+//  渲染
+// ================================================================
+
+function renderAll() {
+  renderTeam();
+  renderGrid();
+  updateHeader();
+}
+
+function renderTeam() {
+  const panel = document.getElementById('teamPanel');
+  panel.innerHTML = '';
+  
+  G.allies.forEach(ally => {
+    const div = document.createElement('div');
+    div.className = 'team-member' + (G.selectedAlly && G.selectedAlly.uid === ally.uid ? ' active' : '') + (ally.dead ? ' dead' : '');
+    const hpPct = Math.max(0, ally.curHp / ally.maxHp * 100);
+    const qiPct = ally.energy / ally.maxEnergy * 100;
+    div.innerHTML = `
+      <div class="mini-icon">${ally.icon}</div>
+      <div class="mini-hp">❤️${ally.curHp}/${ally.maxHp}</div>
+      <div class="mini-qi">气${Math.floor(qiPct)}%</div>
+    `;
+    if (!ally.dead) div.onclick = () => selectAlly(ally.uid);
+    panel.appendChild(div);
+  });
+  
+  // 显示敌人数量
+  const aliveEnemies = G.enemies.filter(e => !e.dead).length;
+  panel.innerHTML += `<div style="margin-left:auto;padding:8px;font-size:0.75em;color:#8a4a3a;">敌:${aliveEnemies}</div>`;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid6');
+  grid.innerHTML = '';
+  
+  for (let pos = 0; pos < 6; pos++) {
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell';
+    cell.dataset.pos = pos;
+    
+    // 标记区域
+    if (pos >= 3) cell.classList.add('ally-zone');
+    else cell.classList.add('enemy-zone');
+    
+    // 区域标签
+    const label = document.createElement('span');
+    label.className = 'zone-label';
+    label.textContent = pos < 3 ? '敌' : '我';
+    cell.appendChild(label);
+    
+    // 查找该位置的单位
+    const ally = G.allies.find(a => a.pos === pos && !a.dead);
+    const enemy = G.enemies.find(e => e.pos === pos && !e.dead);
+    
+    if (ally) {
+      const hpPct = Math.max(0, ally.curHp / ally.maxHp * 100);
+      const qiPct = ally.energy / ally.maxEnergy * 100;
+      cell.innerHTML += `
+        <div class="occupant">
+          <div class="icon">${ally.icon}</div>
+          <div class="hp-bar"><div class="hp-fill" style="width:${hpPct}%"></div></div>
+          <div class="qi-bar"><div class="qi-fill" style="width:${qiPct}%"></div></div>
+          <div class="name">${ally.name}</div>
+        </div>
+      `;
+      cell.onclick = () => onGridClick(pos);
+    } else if (enemy) {
+      const hpPct = Math.max(0, enemy.hp / enemy.maxHp * 100);
+      cell.innerHTML += `
+        <div class="occupant">
+          <div class="icon">${enemy.icon}</div>
+          <div class="hp-bar"><div class="hp-fill" style="width:${hpPct}%;background:#8a3a3a;"></div></div>
+          <div class="name">${enemy.name}</div>
+        </div>
+      `;
+      cell.onclick = () => onGridClick(pos);
+    } else {
+      cell.onclick = () => onGridClick(pos);
+    }
+    
+    grid.appendChild(cell);
+  }
+}
+
+function updateHeader() {
+  const aliveAllies = G.allies.filter(a => !a.dead).length;
+  const aliveEnemies = G.enemies.filter(e => !e.dead).length;
+  document.getElementById('actionHint').textContent = `我:${aliveAllies} 敌:${aliveEnemies}`;
+}
+
+// ================================================================
+//  侧滑面板 & 弹窗
+// ================================================================
+
+function openMenu() {
+  document.getElementById('overlayBg').classList.add('show');
+  document.getElementById('sidePanel').classList.add('open');
+  document.getElementById('panelTitle').textContent = '休整';
+  document.getElementById('panelBody').innerHTML = `
+    <h4>当前进度</h4>
+    <div class="stat-row"><span>银两</span><span>${PERM.gold || 0}</span></div>
+    <div class="stat-row"><span>章节</span><span>${G.chapter}/${CHAPTERS.length}</span></div>
+    <div class="stat-row"><span>试炼</span><span>${PERM.runs}次</span></div>
+    <h4 style="margin-top:16px;">已解锁武者</h4>
+    ${(PERM.unlockedWarriors || ['sword']).map(id => {
+      const w = WARRIOR_TYPES.find(x => x.id === id);
+      return `<div class="stat-row"><span>${w.icon} ${w.name}</span><span>❤️${w.hp} ⚔️${w.atk}</span></div>`;
+    }).join('')}
+  `;
+  document.getElementById('panelActions').style.display = 'block';
+  document.getElementById('panelActions').innerHTML = `
+    <button class="modal-btn primary" onclick="restartRun()">重新开始</button>
+  `;
+}
+
+function closeAll() {
+  document.getElementById('overlayBg').classList.remove('show');
+  document.getElementById('sidePanel').classList.remove('open');
+}
+
+function restartRun() {
+  closeAll();
+  initG();
+  PERM.runs++;
+  saveData();
+  showScreen('screenTitle');
+  document.getElementById('stRuns').textContent = PERM.runs;
+}
+
+function showHelp() {
+  document.getElementById('overlayBg').classList.add('show');
+  document.getElementById('sidePanel').classList.add('open');
+  document.getElementById('panelTitle').textContent = '游戏说明';
+  document.getElementById('panelBody').innerHTML = `
+    <h4>战斗</h4>
+    <div style="font-size:0.8em;color:#8a7a5a;line-height:1.6;">
+      <p>• 六宫格战场：上排为敌区，下排为我区</p>
+      <p>• 每位武者有「气力」，攒满才能行动</p>
+      <p>• 点击武者 → 选择技能 → 选择目标</p>
+      <p>• 结束回合后，所有人恢复15气力</p>
+      <p>• 击败所有敌人进入下一波</p>
+      <p>• 通关章节获得银两和永久解锁</p>
+    </div>
+    <h4 style="margin-top:12px;">操作</h4>
+    <div style="font-size:0.8em;color:#8a7a5a;line-height:1.6;">
+      <p>• 点击底部武者选择</p>
+      <p>• 绿色格表示可攻击目标</p>
+      <p>• 「结束回合」让敌人行动</p>
+    </div>
+  `;
+  document.getElementById('panelActions').style.display = 'none';
+}
+
+// ================================================================
+//  初始化
+// ================================================================
+
+loadData();
+initG();
+
+</script>
+</body>
+</html>
