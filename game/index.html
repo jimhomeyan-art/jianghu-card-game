@@ -622,6 +622,73 @@
         }
         .pick-card.skip-card:hover { opacity: 1; border-color: var(--ink-dim); }
 
+        /* ====== 卡牌长按预览浮窗 ====== */
+        .card-preview-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7); z-index: 800;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: auto;
+            animation: previewFadeIn 0.15s ease-out;
+        }
+        @keyframes previewFadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+        .card-preview {
+            width: 280px; padding: 24px 20px; 
+            background: linear-gradient(180deg, rgba(40,32,24,0.98), rgba(28,22,18,0.98));
+            border: 2px solid var(--gold); border-top: 3px solid var(--gold);
+            border-radius: 4px;
+            text-align: center; position: relative;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.8), 0 0 30px rgba(201,168,76,0.15);
+            animation: previewPopIn 0.2s ease-out;
+        }
+        @keyframes previewPopIn { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .card-preview .preview-rarity {
+            position: absolute; top: 10px; left: 14px; font-size: 11px;
+            font-family: var(--font-title); letter-spacing: 1px;
+        }
+        .card-preview .preview-rarity.rare { color: var(--blue); }
+        .card-preview .preview-rarity.epic { color: #9B6B9B; }
+        .card-preview .preview-rarity.legend { color: var(--gold); text-shadow: 0 0 8px rgba(201,168,76,0.5); }
+        .card-preview .preview-cost {
+            position: absolute; top: 10px; right: 14px; font-size: 18px;
+            font-family: var(--font-title);
+            color: var(--cyan); font-weight: bold;
+            text-shadow: 0 0 8px rgba(74,155,142,0.4);
+        }
+        .card-preview .preview-cost.free { color: #4A9B4A; }
+        .card-preview .preview-icon { font-size: 56px; margin: 16px 0 10px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5)); }
+        .card-preview .preview-name {
+            font-family: var(--font-title); font-size: 22px; color: var(--gold);
+            font-weight: bold; letter-spacing: 2px;
+        }
+        .card-preview .preview-type {
+            font-size: 12px; color: var(--ink-dim); margin: 4px 0 12px;
+            letter-spacing: 1px;
+        }
+        .card-preview .preview-type.attack { color: #AA4444; }
+        .card-preview .preview-type.defense { color: var(--blue); }
+        .card-preview .preview-type.special { color: #9B6B9B; }
+        .card-preview .preview-type.mobility { color: #5A8A5A; }
+        .card-preview .preview-desc {
+            font-size: 14px; color: var(--ink); line-height: 1.7;
+            padding: 12px 10px; background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-rough); border-radius: 2px;
+            margin-bottom: 10px;
+        }
+        .card-preview .preview-kw { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+        .card-preview .preview-kw .kw-tag { font-size: 11px; padding: 3px 10px; border-radius: 2px; }
+        .card-preview .preview-hint {
+            font-size: 10px; color: var(--ink-faint); margin-top: 14px; letter-spacing: 1px;
+        }
+        /* 手机端禁用卡牌hover上移（避免误触） */
+        @media (hover: none) and (pointer: coarse) {
+            .card-item:hover {
+                transform: translateY(0) scale(1) !important;
+                z-index: inherit !important;
+                border-color: var(--border-rough);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            }
+        }
+
         /* ====== 场景背景 ====== */
         #screenMain {
             background: url('assets/backgrounds/main/main_scene.jpeg') top center/cover no-repeat;
@@ -743,6 +810,11 @@
             <div class="pick-sub">新卡牌将永久解锁</div>
         </div>
         <div class="pick-cards" id="pickCards"></div>
+    </div>
+
+    <!-- 卡牌长按预览浮窗 -->
+    <div class="card-preview-overlay" id="cardPreviewOverlay" style="display:none" onclick="hideCardPreview()">
+        <div class="card-preview" id="cardPreview" onclick="event.stopPropagation()"></div>
     </div>
 
     <script>
@@ -1304,21 +1376,35 @@
                 <div class="card-type-tag">${card.type === 'attack' ? '攻' : card.type === 'defense' ? '防' : card.type === 'mobility' ? '机' : '特'}</div>
             `;
 
-            // 拖放逻辑
+            // 拖放逻辑（含长按预览）
             if (canAfford && !cantPlay) {
                 let isDragging = false;
                 let startX, startY;
+                let longPressTimer = null;
+                let longPressTriggered = false;
 
                 const onStart = (e) => {
                     e.preventDefault();
                     const pt = e.touches ? e.touches[0] : e;
                     startX = pt.clientX; startY = pt.clientY;
                     isDragging = false;
+                    longPressTriggered = false;
+
+                    // 触屏设备：300ms 长按预览
+                    if (e.touches) {
+                        longPressTimer = setTimeout(() => {
+                            longPressTriggered = true;
+                            showCardPreview(i);
+                        }, 300);
+                    }
 
                     const onMove = (ev) => {
                         const p = ev.touches ? ev.touches[0] : ev;
                         const dx = p.clientX - startX, dy = p.clientY - startY;
                         if (!isDragging && Math.abs(dx) + Math.abs(dy) > 10) {
+                            // 开始拖动 → 取消长按预览
+                            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                            if (longPressTriggered) { hideCardPreview(); longPressTriggered = false; }
                             isDragging = true;
                             el.classList.add('dragging');
                             el.style.position = 'fixed';
@@ -1328,7 +1414,9 @@
                         }
                         if (isDragging) {
                             el.style.left = (p.clientX - 55) + 'px';
-                            el.style.top = (p.clientY - 75) + 'px';
+                            // 触屏：卡牌偏移到手指上方120px，避免被手指遮挡
+                            const yOffset = ev.touches ? 130 : 75;
+                            el.style.top = (p.clientY - yOffset) + 'px';
                             el.style.bottom = 'auto';
                             // 精确悬停时加强高亮
                             highlightHoverTarget(p.clientX, p.clientY);
@@ -1341,6 +1429,17 @@
                         document.removeEventListener('touchmove', onMove);
                         document.removeEventListener('touchend', onEnd);
                         clearDropHighlights();
+
+                        // 取消长按计时器
+                        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+
+                        // 长按预览模式：松手只关闭预览，不出牌
+                        if (longPressTriggered) {
+                            hideCardPreview();
+                            longPressTriggered = false;
+                            renderHand();
+                            return;
+                        }
 
                         if (isDragging) {
                             const p = ev.changedTouches ? ev.changedTouches[0] : ev;
@@ -2656,6 +2755,45 @@
             renderAll(); checkDead();
         }
     });
+
+    // ==================== 卡牌长按预览系统 ====================
+    function showCardPreview(cardIndex) {
+        const card = G.hand[cardIndex];
+        if (!card) return;
+
+        const isFree = (G.freeEpicLegend && (card.rarity === 'epic' || card.rarity === 'legend')) || (G.freeNextAttack && card.type === 'attack');
+        const displayCost = isFree ? 0 : card.cost;
+        const rarityLabel = card.rarity === 'legend' ? '传说' : card.rarity === 'epic' ? '史诗' : card.rarity === 'rare' ? '稀有' : '基础';
+        const rarityDot = card.rarity === 'legend' ? '◆' : card.rarity === 'epic' ? '◇' : card.rarity === 'rare' ? '○' : '';
+        const typeLabel = card.type === 'attack' ? '攻击' : card.type === 'defense' ? '防御' : card.type === 'mobility' ? '机动' : '特殊';
+
+        let kwHtml = '';
+        if (card.exhaust || card.retain || card.innate) {
+            kwHtml = '<div class="preview-kw">';
+            if (card.exhaust) kwHtml += '<span class="kw-tag exhaust">消耗</span>';
+            if (card.retain) kwHtml += '<span class="kw-tag retain">保留</span>';
+            if (card.innate) kwHtml += '<span class="kw-tag innate">固有</span>';
+            kwHtml += '</div>';
+        }
+
+        const previewEl = document.getElementById('cardPreview');
+        previewEl.innerHTML = `
+            ${rarityDot ? `<div class="preview-rarity ${card.rarity}">${rarityDot} ${rarityLabel}</div>` : '<div class="preview-rarity">基础</div>'}
+            <div class="preview-cost ${isFree ? 'free' : ''}">${displayCost}</div>
+            <div class="preview-icon">${card.icon}</div>
+            <div class="preview-name">${card.name}</div>
+            <div class="preview-type ${card.type}">${typeLabel}</div>
+            <div class="preview-desc">${card.desc}</div>
+            ${kwHtml}
+            <div class="preview-hint">松手关闭 · 拖动出牌</div>
+        `;
+
+        document.getElementById('cardPreviewOverlay').style.display = 'flex';
+    }
+
+    function hideCardPreview() {
+        document.getElementById('cardPreviewOverlay').style.display = 'none';
+    }
 
     // ==================== 启动 ====================
     initGame();
