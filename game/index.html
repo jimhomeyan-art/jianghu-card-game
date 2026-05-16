@@ -987,13 +987,13 @@
 
         // ===== 武僧解锁 =====
         monk_unlock_1: { id: 'monk_unlock_1', name: '震天掌', icon: '💥', type: 'attack', cost: 2, rarity: 'rare', desc: '18伤害；若你当前拥有【闪避】状态，伤害翻倍+回1能量', effect: 'damage_if_dodged', value: 18, class: 'monk' },
-        monk_unlock_2: { id: 'monk_unlock_2', name: '铁布衫', icon: '🥋', type: 'defense', cost: 2, rarity: 'rare', desc: '获得25护甲；护甲本回合不消失', effect: 'armor_persist', value: 25, class: 'monk' },
-        monk_unlock_3: { id: 'monk_unlock_3', name: '凌波微步', icon: '🌊', type: 'mobility', cost: 1, rarity: 'rare', desc: '3回合内，每回合开始获得1次闪避', effect: 'evade_over_time', turns: 3, value: 1, class: 'monk' },
+        monk_unlock_2: { id: 'monk_unlock_2', name: '金钟罩', icon: '🔔', type: 'defense', cost: 2, rarity: 'rare', desc: '获得15护甲；本回合每出一张牌额外+3护甲', effect: 'bell_armor', baseArmor: 15, perCard: 3, class: 'monk' },
+        monk_unlock_3: { id: 'monk_unlock_3', name: '凌波微步', icon: '🌊', type: 'mobility', cost: 1, rarity: 'rare', desc: '获得1次绝对闪避；若闪避成功，此牌回手且本回合变0费', effect: 'lingbo_evade', class: 'monk' },
         monk_unlock_4: { id: 'monk_unlock_4', name: '雾身', icon: '🌫️', type: 'special', cost: 0, rarity: 'rare', desc: '丢弃所有手牌，下回合能量恢复+2', effect: 'discard_all_energy', energyBonus: 2, class: 'monk' },
-        monk_unlock_5: { id: 'monk_unlock_5', name: '金刚不坏', icon: '�', type: 'defense', cost: 3, rarity: 'epic', desc: '本回合无敌；下回合能量归零', effect: 'invincible_penalty', class: 'monk' },
-        monk_unlock_6: { id: 'monk_unlock_6', name: '幻影迷踪', icon: '👻', type: 'defense', cost: 3, rarity: 'epic', desc: '受到攻击时自动反击15伤害，持续2回合', effect: 'auto_counter', value: 15, turns: 2, class: 'monk' },
-        monk_unlock_7: { id: 'monk_unlock_7', name: '天地同寿', icon: '🌋', type: 'attack', cost: 0, rarity: 'legend', desc: '【消耗】消耗所有能量(X)，对单体造成X×20伤害', effect: 'energy_burst', perEnergy: 20, costX: true, exhaust: true, class: 'monk' },
-        monk_unlock_8: { id: 'monk_unlock_8', name: '逍遥游', icon: '🌬️', type: 'special', cost: 3, rarity: 'legend', desc: '【绝学/消耗】获得永久【逍遥】：每打出一张机动牌储存15弹反伤害，受击时全部释放', effect: 'xiaoyao_state', exhaust: true, class: 'monk' },
+        monk_unlock_5: { id: 'monk_unlock_5', name: '不动明王', icon: '🧘', type: 'special', cost: 3, rarity: 'epic', desc: '【消耗】获得永久【不动】：护甲回合结束不再清零', effect: 'budong_state', exhaust: true, class: 'monk' },
+        monk_unlock_6: { id: 'monk_unlock_6', name: '太极推手', icon: '☯️', type: 'mobility', cost: 1, rarity: 'rare', desc: '抽2张牌；若含机动/防御牌，使其本回合费用变0', effect: 'taiji_draw', class: 'monk' },
+        monk_unlock_7: { id: 'monk_unlock_7', name: '大威天龙', icon: '🐉', type: 'attack', cost: 4, rarity: 'legend', desc: '15伤害；本回合每打出过一张机动/防御牌，多攻击1次且费用-1', effect: 'dawei_dragon', value: 15, exhaust: true, class: 'monk' },
+        monk_unlock_8: { id: 'monk_unlock_8', name: '逍遥游', icon: '🌬️', type: 'special', cost: 3, rarity: 'legend', desc: '【消耗】获得永久【逍遥】：每打出一张机动牌储存15弹反伤害，受击时全部释放', effect: 'xiaoyao_state', exhaust: true, class: 'monk' },
 
         // ===== 萨满基础 =====
         shaman_basic_1: { id: 'shaman_basic_1', name: '化血掌', icon: '👋', type: 'attack', cost: 1, rarity: 'basic', desc: '12伤害；回复5点生命', effect: 'damage_heal', value: 12, heal: 5, class: 'shaman' },
@@ -1300,6 +1300,7 @@
 
         // 重置战斗状态
         G.xiaoyaoActive = false; G.xiaoyaoDmg = 0;
+        G.budongActive = false;
         resetBattleState();
 
         // 设置战斗背景（根据章节）
@@ -1462,6 +1463,7 @@
         if (G.thorns > 0) buffs.push(`<span class="buff-tag special">荆棘${G.thorns}</span>`);
         if (G.fumoCounter > 0) buffs.push(`<span class="buff-tag special">伏魔</span>`);
         if (G.xiaoyaoActive) buffs.push(`<span class="buff-tag special">逍遥${G.xiaoyaoDmg || 0}</span>`);
+        if (G.budongActive) buffs.push(`<span class="buff-tag buff">不动</span>`);
         if (G.counterReflect > 0) buffs.push(`<span class="buff-tag special">反震</span>`);
         if (G.absorbRedirect) buffs.push(`<span class="buff-tag special">无相转</span>`);
         if (G.lifestealThisTurn > 0) buffs.push(`<span class="buff-tag special">饮血${Math.floor(G.lifestealThisTurn*100)}%</span>`);
@@ -1518,6 +1520,10 @@
             let effectiveCost = card.cost;
             if (G.freeEpicLegend && (card.rarity === 'epic' || card.rarity === 'legend')) effectiveCost = 0;
             if (G.freeNextAttack && card.type === 'attack') effectiveCost = 0;
+            // 大威天龙：每打出一张机动/防御牌，费用-1
+            if (card.effect === 'dawei_dragon') {
+                effectiveCost = Math.max(0, effectiveCost - (G.mobilityDefPlayedThisTurn || 0));
+            }
             const canAfford = G.energy >= effectiveCost;
 
             let cantPlay = false;
@@ -1793,6 +1799,10 @@
         if (G.freeNextAttack && card.type === 'attack') {
             effectiveCost = 0;
         }
+        // 大威天龙：每打出一张机动/防御牌，费用-1
+        if (card.effect === 'dawei_dragon') {
+            effectiveCost = Math.max(0, effectiveCost - (G.mobilityDefPlayedThisTurn || 0));
+        }
         if (G.energy < effectiveCost) { showFB('气力不足！', 'fail'); return; }
 
         G.energy -= effectiveCost;
@@ -1810,6 +1820,16 @@
 
         // 连击计数（剑侠特色：每打出一张牌，后续攻击+2）
         G.comboCount++;
+
+        // 机动/防御出牌计数（大威天龙用）
+        if (card.type === 'mobility' || card.type === 'defense') {
+            G.mobilityDefPlayedThisTurn = (G.mobilityDefPlayedThisTurn || 0) + 1;
+        }
+
+        // 金钟罩：每出一张牌+3护甲
+        if (G.bellArmorActive && G.bellArmorPerCard > 0) {
+            G.block = (G.block || 0) + G.bellArmorPerCard;
+        }
 
         executeCard(card);
 
@@ -2281,6 +2301,57 @@
                 showFB(`预知！必然避开下${card.value || 3}次攻击`, 'special');
                 break;
 
+            // 不动明王：永久护甲不消失
+            case 'budong_state':
+                G.budongActive = true;
+                showFB('不动明王！护甲永久不消失！', 'special');
+                break;
+
+            // 金钟罩：15护甲+本回合每出一张牌+3护甲
+            case 'bell_armor':
+                G.block = (G.block || 0) + (card.baseArmor || 15);
+                G.bellArmorPerCard = (card.perCard || 3);
+                G.bellArmorActive = true;
+                showFB(`金钟罩！+${card.baseArmor || 15}护甲，每出牌+3`, 'info');
+                break;
+
+            // 凌波微步(新)：1次绝对闪避，闪避成功回手+变0费
+            case 'lingbo_evade':
+                G.absoluteEvade = (G.absoluteEvade || 0) + 1;
+                G.lingboCardId = card.id;
+                G.lingboPending = true;
+                showFB('凌波微步！闪避成功此牌回手变0费', 'info');
+                break;
+
+            // 太极推手：抽2张，机动/防御牌本回合变0费
+            case 'taiji_draw':
+                {
+                    const beforeLen = G.hand.length;
+                    drawCards(2);
+                    const drawn = G.hand.slice(beforeLen);
+                    drawn.forEach(c => {
+                        if (c.type === 'mobility' || c.type === 'defense') {
+                            c.cost = 0;
+                            c._taijiFreed = true;
+                        }
+                    });
+                    const freeCount = drawn.filter(c => c._taijiFreed).length;
+                    showFB(`太极推手！抽2张${freeCount > 0 ? `，${freeCount}张变0费` : ''}`, 'info');
+                }
+                break;
+
+            // 大威天龙：15伤害×(1+本回合打出的机动/防御牌数)，费用-同等数量
+            case 'dawei_dragon':
+                if (enemy) {
+                    const mobilityDefCount = G.mobilityDefPlayedThisTurn || 0;
+                    const totalHits = 1 + mobilityDefCount;
+                    for (let i = 0; i < totalHits; i++) {
+                        if (enemy.hp > 0) dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                    }
+                    showFB(`大威天龙！${totalHits}连击！`, 'special');
+                }
+                break;
+
             // ==================== 萨满 ====================
             // 真气掌：伤害+回血
             case 'damage_heal':
@@ -2570,6 +2641,9 @@
         G.lifestealThisTurn = 0;
         G.evadeDrawPending = false;
         G.monkDrunkEvade = false;
+        G.bellArmorActive = false; G.bellArmorPerCard = 0;
+        G.mobilityDefPlayedThisTurn = 0;
+        G.lingboPending = false;
 
         // 闪避回合递减
         if (G.evadeBuffTurns > 0) {
@@ -2672,6 +2746,13 @@
                 if (G.monkDrunkEvade) {
                     G.nextTurnDrawBonus = (G.nextTurnDrawBonus || 0) + 1;
                     showFB('醉拳闪！闪避成功，下回合手牌+1', 'special');
+                }
+                // 凌波微步：闪避成功回手+0费
+                if (G.lingboPending) {
+                    const lingboCard = {...ALL_CARDS['monk_unlock_3'], cost: 0};
+                    G.hand.push(lingboCard);
+                    G.lingboPending = false;
+                    showFB('凌波微步！回手且变0费！', 'special');
                 }
                 // 醉拳闪旧版：闪避成功下张攻击免费
                 if (G.freeAttackOnDodge) {
@@ -2836,8 +2917,8 @@
             G.nextTurnAtkBonus = 0;
         }
 
-        // 格挡不保留（除非铁布衫）
-        if (!G.blockPersist) {
+        // 格挡不保留（除非铁布衫或不动明王）
+        if (!G.blockPersist && !G.budongActive) {
             G.block = 0;
         }
         G.blockPersist = false;
