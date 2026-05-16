@@ -622,6 +622,66 @@
         }
         .pick-card.skip-card:hover { opacity: 1; border-color: var(--ink-dim); }
 
+        /* ====== 牌堆查看器 ====== */
+        .pile-viewer-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85); z-index: 900;
+            display: flex; flex-direction: column; animation: previewFadeIn 0.15s ease-out;
+        }
+        .pile-viewer-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px; border-bottom: 1px solid var(--border-rough);
+        }
+        .pile-viewer-tabs { display: flex; gap: 4px; }
+        .pile-tab {
+            padding: 8px 14px; font-family: var(--font-title); font-size: 13px;
+            color: var(--ink-dim); background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-rough); border-radius: 2px; cursor: pointer;
+            letter-spacing: 1px; transition: all 0.2s;
+        }
+        .pile-tab.active { color: var(--gold); border-color: var(--gold); background: rgba(201,168,76,0.1); }
+        .pile-viewer-close {
+            font-size: 24px; color: var(--ink-dim); cursor: pointer; padding: 4px 8px;
+            font-family: var(--font-title);
+        }
+        .pile-viewer-close:hover { color: var(--gold); }
+        .pile-viewer-body {
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+            align-content: start;
+        }
+        .pile-card {
+            padding: 10px 6px; background: linear-gradient(180deg, rgba(40,32,24,0.95), rgba(28,22,18,0.95));
+            border: 1px solid var(--border-rough); border-top: 2px solid var(--border-rough);
+            border-radius: 3px; text-align: center; position: relative;
+        }
+        .pile-card.attack { border-top-color: rgba(196,30,58,0.5); }
+        .pile-card.defense { border-top-color: rgba(42,90,140,0.5); }
+        .pile-card.special { border-top-color: rgba(107,58,125,0.5); }
+        .pile-card.mobility { border-top-color: rgba(45,74,45,0.5); }
+        .pile-card .pile-card-icon { font-size: 24px; }
+        .pile-card .pile-card-name { font-family: var(--font-title); font-size: 12px; color: var(--ink); margin-top: 2px; }
+        .pile-card .pile-card-desc { font-size: 9px; color: var(--ink-dim); margin-top: 2px; line-height: 1.3; }
+        .pile-card .pile-card-cost { position: absolute; top: 2px; right: 4px; font-size: 11px; color: var(--cyan); font-weight: bold; }
+        .pile-card .pile-card-rarity { position: absolute; top: 2px; left: 4px; font-size: 8px; }
+        .pile-card .pile-card-rarity.rare { color: var(--blue); }
+        .pile-card .pile-card-rarity.epic { color: #9B6B9B; }
+        .pile-card .pile-card-rarity.legend { color: var(--gold); }
+        .pile-viewer-empty { grid-column: 1 / -1; text-align: center; color: var(--ink-faint); padding: 40px; font-size: 14px; }
+
+        /* 牌堆信息栏 */
+        .pile-info-bar {
+            display: flex; gap: 6px; align-items: center;
+        }
+        .pile-info-btn {
+            font-size: 11px; color: var(--ink-dim); cursor: pointer;
+            padding: 2px 6px; border-radius: 2px;
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border-rough);
+            font-family: var(--font-title); letter-spacing: 0.5px;
+            transition: all 0.2s;
+        }
+        .pile-info-btn:hover { color: var(--gold); border-color: var(--gold); }
+
         /* ====== 卡牌长按预览浮窗 ====== */
         .card-preview-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -781,6 +841,11 @@
         <div class="hand-area">
             <div class="hand-label">
                 <span>手牌 <span id="handCount">0</span>/10</span>
+                <div class="pile-info-bar">
+                    <span class="pile-info-btn" onclick="openPileViewer('deck')">牌组 <span id="deckCount">0</span></span>
+                    <span class="pile-info-btn" onclick="openPileViewer('draw')">抽牌堆 <span id="drawCount">0</span></span>
+                    <span class="pile-info-btn" onclick="openPileViewer('discard')">弃牌堆 <span id="discardCount">0</span></span>
+                </div>
                 <span id="turnInfo">回合 1</span>
             </div>
             <div class="hand-fan" id="handList"></div>
@@ -810,6 +875,19 @@
             <div class="pick-sub">新卡牌将永久解锁</div>
         </div>
         <div class="pick-cards" id="pickCards"></div>
+    </div>
+
+    <!-- 牌堆查看器 -->
+    <div class="pile-viewer-overlay" id="pileViewer" style="display:none">
+        <div class="pile-viewer-header">
+            <div class="pile-viewer-tabs">
+                <span class="pile-tab active" onclick="switchPileTab('deck')">全牌组</span>
+                <span class="pile-tab" onclick="switchPileTab('draw')">抽牌堆</span>
+                <span class="pile-tab" onclick="switchPileTab('discard')">弃牌堆</span>
+            </div>
+            <span class="pile-viewer-close" onclick="closePileViewer()">✕</span>
+        </div>
+        <div class="pile-viewer-body" id="pileViewerBody"></div>
     </div>
 
     <!-- 卡牌长按预览浮窗 -->
@@ -1324,6 +1402,10 @@
         const list = document.getElementById('handList');
         list.innerHTML = '';
         document.getElementById('handCount').textContent = G.hand.length;
+        document.getElementById('drawCount').textContent = G.deck.length;
+        document.getElementById('discardCount').textContent = G.discard.length;
+        // 全牌组 = 抽牌堆 + 手牌 + 弃牌堆
+        document.getElementById('deckCount').textContent = G.deck.length + G.hand.length + G.discard.length;
         const n = G.hand.length;
         if (n === 0) return;
 
@@ -2705,6 +2787,11 @@
             G.permanent.wins++;
         }
         saveData();
+        // 清空牌堆状态，防止下一局残留
+        G.deck = []; G.hand = []; G.discard = [];
+        G.enemies = [];
+        G.selectedCard = null;
+        G.targetEnemy = null;
         showModal(victory ? '🏆' : '💀', victory ? '通关成功！' : '阵亡', `「${G.player.name}」倒下...\n💰 银两：${G.gold}`, [
             { name: '再来一局', effect: () => { hideModal(); showScreen('screenMain'); updateMain(); }}
         ]);
@@ -2784,6 +2871,67 @@
             renderAll(); checkDead();
         }
     });
+
+    // ==================== 牌堆查看器 ====================
+    let _currentPileTab = 'deck';
+
+    function openPileViewer(tab) {
+        _currentPileTab = tab || 'deck';
+        renderPileViewer();
+        document.getElementById('pileViewer').style.display = 'flex';
+    }
+
+    function closePileViewer() {
+        document.getElementById('pileViewer').style.display = 'none';
+    }
+
+    function switchPileTab(tab) {
+        _currentPileTab = tab;
+        document.querySelectorAll('.pile-tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        renderPileViewer();
+    }
+
+    function renderPileViewer() {
+        const body = document.getElementById('pileViewerBody');
+        let cards = [];
+
+        if (_currentPileTab === 'deck') {
+            // 全牌组：抽牌堆+手牌+弃牌堆的所有卡
+            const allIds = [
+                ...G.deck.map(c => typeof c === 'string' ? c : c.id),
+                ...G.hand.map(c => c.id),
+                ...G.discard
+            ];
+            cards = allIds.map(id => ALL_CARDS[id]).filter(Boolean);
+        } else if (_currentPileTab === 'draw') {
+            cards = G.deck.map(c => typeof c === 'string' ? ALL_CARDS[c] : ALL_CARDS[c.id] || c).filter(Boolean);
+        } else if (_currentPileTab === 'discard') {
+            cards = G.discard.map(id => ALL_CARDS[id]).filter(Boolean);
+        }
+
+        if (cards.length === 0) {
+            body.innerHTML = '<div class="pile-viewer-empty">空</div>';
+            return;
+        }
+
+        // 按类型排序：攻击 > 防御 > 机动 > 特殊
+        const typeOrder = { attack: 0, defense: 1, mobility: 2, special: 3 };
+        cards.sort((a, b) => (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99));
+
+        body.innerHTML = cards.map(card => {
+            const rarityDot = card.rarity === 'legend' ? '◆' : card.rarity === 'epic' ? '◇' : card.rarity === 'rare' ? '○' : '';
+            return `
+                <div class="pile-card ${card.type}">
+                    ${rarityDot ? `<div class="pile-card-rarity ${card.rarity}">${rarityDot}</div>` : ''}
+                    <div class="pile-card-cost">⚡${card.cost}</div>
+                    <div class="pile-card-icon">${card.icon}</div>
+                    <div class="pile-card-name">${card.name}</div>
+                    <div class="pile-card-desc">${card.desc}</div>
+                </div>
+            `;
+        }).join('');
+    }
 
     // ==================== 卡牌长按预览系统 ====================
     function showCardPreview(cardIndex) {
