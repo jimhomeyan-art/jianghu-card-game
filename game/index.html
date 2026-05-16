@@ -1045,15 +1045,15 @@
 
     // 敌人模板
     const ENEMY_TEMPLATES = [
-        { name: '山贼', icon: '👊', img: 'assets/enemies/normal/山贼.png', hp: 55, atk: 10, def: 2, gold: 18 },
-        { name: '恶霸', icon: '😈', img: 'assets/enemies/normal/恶霸.png', hp: 80, atk: 12, def: 4, gold: 28 },
-        { name: '暗卫', icon: '🗡️', img: 'assets/enemies/normal/暗卫.png', hp: 50, atk: 18, def: 2, gold: 35, canEvade: true },
-        { name: '头陀', icon: '🧑‍🦱', img: 'assets/enemies/normal/头陀.png', hp: 110, atk: 10, def: 10, gold: 38 },
-        { name: '魔头', icon: '🧔', img: 'assets/enemies/normal/魔头.png', hp: 160, atk: 15, def: 8, gold: 70 },
+        { name: '山贼', icon: '👊', img: 'assets/enemies/normal/山贼.png', hp: 55, atk: 10, def: 2, gold: 18, evadeRate: 0.10 },
+        { name: '恶霸', icon: '😈', img: 'assets/enemies/normal/恶霸.png', hp: 80, atk: 12, def: 4, gold: 28, evadeRate: 0.05 },
+        { name: '暗卫', icon: '🗡️', img: 'assets/enemies/normal/暗卫.png', hp: 50, atk: 18, def: 2, gold: 35, evadeRate: 0.25 },
+        { name: '头陀', icon: '🧑‍🦱', img: 'assets/enemies/normal/头陀.png', hp: 110, atk: 10, def: 10, gold: 38, evadeRate: 0.05 },
+        { name: '魔头', icon: '🧔', img: 'assets/enemies/normal/魔头.png', hp: 160, atk: 15, def: 8, gold: 70, evadeRate: 0.15 },
     ];
     const BOSS_TEMPLATES = [
-        { name: '光明左使', icon: '💀', img: 'assets/enemies/boss/光明左使.png', hp: 450, atk: 22, def: 14, gold: 250 },
-        { name: '魔教教主', icon: '👹', img: 'assets/enemies/boss/魔教教主.png', hp: 600, atk: 28, def: 18, gold: 400 },
+        { name: '光明左使', icon: '💀', img: 'assets/enemies/boss/光明左使.png', hp: 450, atk: 22, def: 14, gold: 250, evadeRate: 0.12 },
+        { name: '魔教教主', icon: '👹', img: 'assets/enemies/boss/魔教教主.png', hp: 600, atk: 28, def: 18, gold: 400, evadeRate: 0.10 },
     ];
 
     // 事件
@@ -1418,7 +1418,7 @@
                   <img src="${e.img||''}" alt="${e.name}">
                   <div class="enemy-name-overlay">
                     <div class="enemy-name">${e.name}</div>
-                    <div class="enemy-stats-text">${e.atk}攻 ${e.def}防</div>
+                    <div class="enemy-stats-text">${e.atk}攻 ${e.def}防${e.evadeRate > 0 ? ` ${Math.floor(e.evadeRate*100)}%闪` : ''}</div>
                   </div>
                   <div class="enemy-intent ${intentCls}">${intentTxt}</div>
                   ${dbTags?`<div class="enemy-debuff-tags">${dbTags}</div>`:''}
@@ -2382,8 +2382,8 @@
     function dealDamage(enemy, baseDmg, mode = 0, ignoreDefPct = 0, forceCrit = false) {
         if (!enemy || enemy.hp <= 0) return 0;
 
-        // 闪避判定（只有标记了canEvade的敌人才有闪避能力，mode=2无视闪避）
-        if (mode === 0 && !forceCrit && enemy.canEvade && Math.random() < 0.2) {
+        // 闪避判定（所有有evadeRate的敌人都可能闪避，mode=2无视闪避）
+        if (mode === 0 && !forceCrit && enemy.evadeRate > 0 && Math.random() < enemy.evadeRate) {
             showDmgPop(0, 'miss');
             return 0;
         }
