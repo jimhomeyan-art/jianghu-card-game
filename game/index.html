@@ -1341,7 +1341,8 @@
         G.lifestealThisTurn = 0;
         G.freeAttackOnDodge = false; G.freeNextAttack = false;
         G.fumoBlock = 0; G.fumoCounter = 0;
-        // 逍遥状态跨战斗保留（本场战斗永久），新一局时在confirmClass中清除
+        G.xiaoyaoActive = false; G.xiaoyaoDmg = 0;
+        G.budongActive = false;
         G.nextTurnDrawBonus = 0;
         G.mobilityDefPlayedThisTurn = 0;
         G.bellArmorActive = false; G.bellArmorPerCard = 0;
@@ -1834,8 +1835,8 @@
         // 机动/防御出牌计数（大威天龙用）
         if (card.type === 'mobility' || card.type === 'defense') {
             G.mobilityDefPlayedThisTurn = (G.mobilityDefPlayedThisTurn || 0) + 1;
-            // 醉拳闪：机动/防御牌回1能量
-            if (G.drunkFistCharges > 0) {
+            // 醉拳闪：机动/防御牌回1能量（排除醉拳闪自身）
+            if (G.drunkFistCharges > 0 && card.effect !== 'drunk_fist_energy') {
                 G.energy = Math.min(G.maxEnergy, G.energy + 1);
                 G.drunkFistCharges--;
                 showFB(`醉拳闪！回1能量（剩${G.drunkFistCharges}次）`, 'info');
