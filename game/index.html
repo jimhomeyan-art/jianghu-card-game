@@ -982,13 +982,13 @@
         monk_basic_1: { id: 'monk_basic_1', name: '铁山靠', icon: '🛡️', type: 'defense', cost: 1, rarity: 'basic', desc: '10格挡；下回合攻击+5', effect: 'block_atk', blockValue: 10, atkBonus: 5, class: 'monk' },
         monk_basic_2: { id: 'monk_basic_2', name: '伏魔拳', icon: '👊', type: 'attack', cost: 2, rarity: 'basic', desc: '14伤害；获得【伏魔】：下次受击时抵消5伤害并反击15', effect: 'fumo_strike', value: 14, fumoBlock: 5, fumoCounter: 15, class: 'monk' },
         monk_basic_3: { id: 'monk_basic_3', name: '铁山靠·极', icon: '💪', type: 'attack', cost: 2, rarity: 'basic', desc: '消耗所有护甲，造成护甲值1.5倍的伤害', effect: 'armor_crush', mult: 1.5, class: 'monk' },
-        monk_basic_4: { id: 'monk_basic_4', name: '醉拳闪', icon: '🍶', type: 'mobility', cost: 1, rarity: 'basic', desc: '本回合闪避+60%；闪避成功下回合手牌+1，失败能量+1', effect: 'monk_drunk_evade', evadeBonus: 0.6, class: 'monk' },
+        monk_basic_4: { id: 'monk_basic_4', name: '凌波微步', icon: '🌊', type: 'mobility', cost: 1, rarity: 'basic', desc: '本回合闪避+60%；闪避成功下回合手牌+1，失败能量+1', effect: 'monk_drunk_evade', evadeBonus: 0.6, class: 'monk' },
         monk_basic_5: { id: 'monk_basic_5', name: '无相转', icon: '�', type: 'defense', cost: 2, rarity: 'basic', desc: '抵消下次伤害并转移给敌人【保留】', effect: 'absorb_redirect', retain: true, class: 'monk' },
 
         // ===== 武僧解锁 =====
         monk_unlock_1: { id: 'monk_unlock_1', name: '震天掌', icon: '💥', type: 'attack', cost: 2, rarity: 'rare', desc: '18伤害；若你当前拥有【闪避】状态，伤害翻倍+回1能量', effect: 'damage_if_dodged', value: 18, class: 'monk' },
         monk_unlock_2: { id: 'monk_unlock_2', name: '金钟罩', icon: '🔔', type: 'defense', cost: 2, rarity: 'rare', desc: '获得15护甲；本回合每出一张牌额外+3护甲', effect: 'bell_armor', baseArmor: 15, perCard: 3, class: 'monk' },
-        monk_unlock_3: { id: 'monk_unlock_3', name: '凌波微步', icon: '🌊', type: 'mobility', cost: 1, rarity: 'rare', desc: '本回合闪避+60%；闪避成功此牌回手且变0费，失败正常弃置', effect: 'lingbo_evade', evadeBonus: 0.6, class: 'monk' },
+        monk_unlock_3: { id: 'monk_unlock_3', name: '醉拳闪', icon: '🍶', type: 'mobility', cost: 0, rarity: 'rare', desc: '本回合你打出的下2张机动/防御牌，打出时恢复1点能量', effect: 'drunk_fist_energy', charges: 2, class: 'monk' },
         monk_unlock_4: { id: 'monk_unlock_4', name: '雾身', icon: '🌫️', type: 'special', cost: 0, rarity: 'rare', desc: '丢弃所有手牌，下回合能量恢复+2', effect: 'discard_all_energy', energyBonus: 2, class: 'monk' },
         monk_unlock_5: { id: 'monk_unlock_5', name: '不动明王', icon: '🧘', type: 'special', cost: 3, rarity: 'epic', desc: '【消耗】获得永久【不动】：护甲回合结束不再清零', effect: 'budong_state', exhaust: true, class: 'monk' },
         monk_unlock_6: { id: 'monk_unlock_6', name: '太极推手', icon: '☯️', type: 'mobility', cost: 1, rarity: 'rare', desc: '抽2张牌；若含机动/防御牌，使其本回合费用变0', effect: 'taiji_draw', class: 'monk' },
@@ -1834,6 +1834,12 @@
         // 机动/防御出牌计数（大威天龙用）
         if (card.type === 'mobility' || card.type === 'defense') {
             G.mobilityDefPlayedThisTurn = (G.mobilityDefPlayedThisTurn || 0) + 1;
+            // 醉拳闪：机动/防御牌回1能量
+            if (G.drunkFistCharges > 0) {
+                G.energy = Math.min(G.maxEnergy, G.energy + 1);
+                G.drunkFistCharges--;
+                showFB(`醉拳闪！回1能量（剩${G.drunkFistCharges}次）`, 'info');
+            }
         }
 
         // 金钟罩：每出一张牌+3护甲
@@ -2333,6 +2339,12 @@
                 showFB('凌波微步！闪避+60%，成功则回手变0费', 'info');
                 break;
 
+            // 醉拳闪(新)：下2张机动/防御牌恢复1能量
+            case 'drunk_fist_energy':
+                G.drunkFistCharges = (card.charges || 2);
+                showFB('醉拳闪！下2张机动/防御牌回1能量', 'info');
+                break;
+
             // 太极推手：抽2张，机动/防御牌本回合变0费
             case 'taiji_draw':
                 {
@@ -2664,6 +2676,7 @@
         G.bellArmorActive = false; G.bellArmorPerCard = 0;
         G.mobilityDefPlayedThisTurn = 0;
         G.lingboPending = false;
+        G.drunkFistCharges = 0;
 
         // 闪避回合递减
         if (G.evadeBuffTurns > 0) {
