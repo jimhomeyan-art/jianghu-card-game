@@ -964,9 +964,6 @@
         assassin_basic_3: { id: 'assassin_basic_3', name: '毒刃', icon: '🩸', type: 'attack', cost: 1, rarity: 'basic', desc: '8伤害 + 中毒3层', effect: 'damage_poison', value: 8, poisonStacks: 3, class: 'assassin' },
         assassin_basic_4: { id: 'assassin_basic_4', name: '瞬闪', icon: '💨', type: 'mobility', cost: 1, rarity: 'basic', desc: '本回合闪避率+60%；若闪避成功，下回合手牌+1', effect: 'evade_buff_draw', evadeBonus: 0.6, class: 'assassin' },
         assassin_basic_5: { id: 'assassin_basic_5', name: '淬毒', icon: '☠️', type: 'special', cost: 1, rarity: 'basic', desc: '使敌人的【中毒】层数翻倍', effect: 'poison_double', class: 'assassin' },
-        assassin_basic_3: { id: 'assassin_basic_3', name: '毒刃', icon: '🩸', type: 'attack', cost: 1, rarity: 'basic', desc: '8伤害 + 中毒3层', effect: 'damage_poison', value: 8, poisonStacks: 3, class: 'assassin' },
-        assassin_basic_4: { id: 'assassin_basic_4', name: '瞬闪', icon: '💨', type: 'mobility', cost: 1, rarity: 'basic', desc: '本回合闪避率+60%；若闪避成功，下回合手牌+1', effect: 'evade_buff_draw', evadeBonus: 0.6, class: 'assassin' },
-        assassin_basic_5: { id: 'assassin_basic_5', name: '淬毒', icon: '☠️', type: 'special', cost: 1, rarity: 'basic', desc: '使敌人的【中毒】层数翻倍', effect: 'poison_double', class: 'assassin' },
 
         // ===== 刺客解锁 =====
         assassin_unlock_1: { id: 'assassin_unlock_1', name: '致命', icon: '�', type: 'attack', cost: 2, rarity: 'rare', desc: '20伤害；若敌人满血则暴击', effect: 'damage_crit_if_full', value: 20, class: 'assassin' },
@@ -2209,12 +2206,12 @@
                 }
                 break;
 
-            // 醉拳闪：闪避+60%，成功手牌+1，失败能量+1
+            // 凌波微步：闪避+60%，成功手牌+1，失败能量+1
             case 'monk_drunk_evade':
                 G.evadeBuff = (G.evadeBuff || 0) + (card.evadeBonus || 0.6);
                 G.evadeBuffTurns = Math.max(G.evadeBuffTurns || 0, 1);
                 G.monkDrunkEvade = true;
-                showFB('醉拳闪！闪避+60%，成功手牌+1/失败能量+1', 'info');
+                showFB('凌波微步！闪避+60%，成功手牌+1/失败能量+1', 'info');
                 break;
 
             // 醉拳闪旧版（兼容）
@@ -2779,11 +2776,11 @@
                 // 醉拳闪(新)：闪避成功下回合手牌+1
                 if (G.monkDrunkEvade) {
                     G.nextTurnDrawBonus = (G.nextTurnDrawBonus || 0) + 1;
-                    showFB('醉拳闪！闪避成功，下回合手牌+1', 'special');
+                    showFB('凌波微步！闪避成功，下回合手牌+1', 'special');
                 }
                 // 凌波微步：闪避成功回手+0费
                 if (G.lingboPending) {
-                    const lingboCard = {...ALL_CARDS['monk_unlock_3'], cost: 0};
+                    const lingboCard = {...ALL_CARDS['monk_basic_4'], cost: 0};
                     G.hand.push(lingboCard);
                     G.lingboPending = false;
                     showFB('凌波微步！回手且变0费！', 'special');
@@ -2797,10 +2794,10 @@
                 return;
             }
 
-            // 醉拳闪(新)：闪避失败能量+1
+            // 凌波微步：闪避失败能量+1
             if (G.monkDrunkEvade) {
                 G.energy = Math.min(G.maxEnergy, G.energy + 1);
-                showFB('醉拳闪！闪避失败，能量+1', 'info');
+                showFB('凌波微步！闪避失败，能量+1', 'info');
             }
 
             // 免疫
