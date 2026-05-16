@@ -1393,6 +1393,11 @@
     function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } }
 
     function renderAll() {
+        // 安全检查：如果所有敌人已死但没触发结束，补一次checkDead
+        if (G.enemies && G.enemies.length > 0 && G.enemies.every(e => e.hp <= 0)) {
+            checkDead();
+            return;
+        }
         renderEnemies();
         renderPlayer();
         renderHand();
@@ -2584,6 +2589,7 @@
         G.enemies.forEach(e => {
             if (e.hp > 0 && e.poison > 0) {
                 e.hp -= e.poison;
+                if (e.hp < 0) e.hp = 0;
                 showFB(`${e.name}中毒-${e.poison}！`, 'special');
             }
             // 重伤回合递减
@@ -2597,6 +2603,10 @@
                 if (e.armorBreakTurns <= 0) { e.armorBreak = 0; showFB(`${e.name}破甲效果消失`, 'info'); }
             }
         });
+
+        // 中毒/debuff可能杀死敌人，检查一次
+        checkDead();
+        if (G.enemies.length === 0) return;
 
         // 不死之身回血
         if (G.immortalRegenTurns > 0) {
