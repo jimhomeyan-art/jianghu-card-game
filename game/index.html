@@ -695,6 +695,12 @@
         .deck-section-title .deck-section-sub {
             font-size: 10px; color: var(--ink-faint); letter-spacing: 0; margin-left: 6px;
         }
+        .class-passive-desc {
+            font-size: 12px; color: var(--ink); line-height: 1.6;
+            padding: 10px 12px; margin-bottom: 12px;
+            background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.2);
+            border-radius: 3px; letter-spacing: 0.5px;
+        }
         .deck-preview-grid {
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
         }
@@ -1011,6 +1017,7 @@
     const CLASSES = {
         sword: {
             name: '剑侠', icon: '🗡️', img: 'assets/characters/sword/sword.jpg', desc: '连招暴击，攻守兼备',
+            passive: '【剑意连击】每回合打出的牌越多，后续攻击伤害越高（每张+2）。0费上挑可快速开启连招链。',
             hp: 100, atk: 12, def: 8, evade: 0.1,
             energy: 3, maxEnergy: 5, energyRegen: 3,
             basicCards: ['sword_basic_1','sword_basic_2','sword_basic_3','sword_basic_4','sword_basic_5'],
@@ -1019,6 +1026,7 @@
         },
         assassin: {
             name: '刺客', icon: '🗡️', img: 'assets/characters/assassin/assassin.jpg', desc: '潜行暗杀，剧毒致命',
+            passive: '【影杀】高闪避体质(20%)；潜行状态下暗刺伤害×3。利用闪避和潜行打出爆发连击。',
             hp: 70, atk: 18, def: 4, evade: 0.2,
             energy: 4, maxEnergy: 7, energyRegen: 3,
             basicCards: ['assassin_basic_1','assassin_basic_2','assassin_basic_3','assassin_basic_4','assassin_basic_5'],
@@ -1027,6 +1035,7 @@
         },
         monk: {
             name: '武僧', icon: '👊', img: 'assets/characters/monk/monk.jpg', desc: '反伤格挡，以守代攻',
+            passive: '【伏魔体】高防御+高回能(每回合4气)。伏魔拳挂反击状态，机动牌配合逍遥蓄能弹反，越打越痛。',
             hp: 110, atk: 8, def: 14, evade: 0.18,
             energy: 3, maxEnergy: 5, energyRegen: 4,
             basicCards: ['monk_basic_1','monk_basic_2','monk_basic_3','monk_basic_4','monk_basic_5'],
@@ -1035,6 +1044,7 @@
         },
         shaman: {
             name: '萨满', icon: '🔮', img: 'assets/characters/shaman/shama.jpg', desc: '以血为代价，掌控生死',
+            passive: '【不死之身】每场战斗首次濒死时保命(剩1血)+回血。献祭生命值释放强力技能，高风险高回报。',
             hp: 130, atk: 14, def: 6, evade: 0.05,
             energy: 3, maxEnergy: 6, energyRegen: 2,
             basicCards: ['shaman_basic_1','shaman_basic_2','shaman_basic_3','shaman_basic_4','shaman_basic_5'],
@@ -1240,6 +1250,8 @@
         const unlockPool = cls.unlockPool || [];
 
         container.innerHTML = `
+            <div class="deck-section-title">⚡ 职业被动</div>
+            <div class="class-passive-desc">${cls.passive}</div>
             <div class="deck-section-title">📋 初始牌组 <span class="deck-section-sub">每张×2，共${cls.basicCards.length * 2}张</span></div>
             <div class="deck-preview-grid">
                 ${basicUnique.map(id => cardHtml(id, false)).join('')}
