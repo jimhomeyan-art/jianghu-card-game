@@ -1342,6 +1342,9 @@
         G.fumoBlock = 0; G.fumoCounter = 0;
         // 逍遥状态跨战斗保留（本场战斗永久），新一局时在confirmClass中清除
         G.nextTurnDrawBonus = 0;
+        G.mobilityDefPlayedThisTurn = 0;
+        G.bellArmorActive = false; G.bellArmorPerCard = 0;
+        G.lingboPending = false;
     }
 
     // ==================== 战斗系统 ====================
@@ -1537,7 +1540,11 @@
             if (card.retain) kwTags += '<span class="kw-tag retain">保留</span>';
             if (card.innate) kwTags += '<span class="kw-tag innate">固有</span>';
             const isFree = (G.freeEpicLegend && (card.rarity === 'epic' || card.rarity === 'legend')) || (G.freeNextAttack && card.type === 'attack');
-            const displayCost = card.costX ? 'X' : (isFree ? 0 : card.cost);
+            let displayCost = card.costX ? 'X' : (isFree ? 0 : card.cost);
+            // 大威天龙动态费用显示
+            if (card.effect === 'dawei_dragon') {
+                displayCost = Math.max(0, card.cost - (G.mobilityDefPlayedThisTurn || 0));
+            }
 
             // 扇形位置计算
             const angle = n === 1 ? 0 : startAngle + maxAngle * i;
