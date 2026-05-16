@@ -974,7 +974,7 @@
 
         // ===== 武僧基础 =====
         monk_basic_1: { id: 'monk_basic_1', name: '铁山靠', icon: '🛡️', type: 'defense', cost: 1, rarity: 'basic', desc: '10格挡；下回合攻击+5', effect: 'block_atk', blockValue: 10, atkBonus: 5, class: 'monk' },
-        monk_basic_2: { id: 'monk_basic_2', name: '伏魔拳', icon: '👊', type: 'attack', cost: 2, rarity: 'basic', desc: '10伤害；若敌方意图攻击，额外15破招伤害+施加虚弱', effect: 'damage_counter_strike', value: 10, bonusDmg: 15, class: 'monk' },
+        monk_basic_2: { id: 'monk_basic_2', name: '伏魔拳', icon: '👊', type: 'attack', cost: 2, rarity: 'basic', desc: '14伤害；获得【伏魔】：下次受击时抵消5伤害并反击15', effect: 'fumo_strike', value: 14, fumoBlock: 5, fumoCounter: 15, class: 'monk' },
         monk_basic_3: { id: 'monk_basic_3', name: '铁山靠·极', icon: '💪', type: 'attack', cost: 2, rarity: 'basic', desc: '消耗所有护甲，造成护甲值1.5倍的伤害', effect: 'armor_crush', mult: 1.5, class: 'monk' },
         monk_basic_4: { id: 'monk_basic_4', name: '醉拳闪', icon: '🍶', type: 'mobility', cost: 1, rarity: 'basic', desc: '获得1次闪避；若成功闪避，下张攻击牌费用为0', effect: 'evade_free_attack', class: 'monk' },
         monk_basic_5: { id: 'monk_basic_5', name: '无相转', icon: '�', type: 'defense', cost: 2, rarity: 'basic', desc: '抵消下次伤害并转移给敌人【保留】', effect: 'absorb_redirect', retain: true, class: 'monk' },
@@ -987,7 +987,7 @@
         monk_unlock_5: { id: 'monk_unlock_5', name: '金刚不坏', icon: '�', type: 'defense', cost: 3, rarity: 'epic', desc: '本回合无敌；下回合能量归零', effect: 'invincible_penalty', class: 'monk' },
         monk_unlock_6: { id: 'monk_unlock_6', name: '幻影迷踪', icon: '👻', type: 'defense', cost: 3, rarity: 'epic', desc: '受到攻击时自动反击15伤害，持续2回合', effect: 'auto_counter', value: 15, turns: 2, class: 'monk' },
         monk_unlock_7: { id: 'monk_unlock_7', name: '天地同寿', icon: '🌋', type: 'attack', cost: 0, rarity: 'legend', desc: '消耗所有能量(X)，造成X×20点全体伤害', effect: 'energy_burst', perEnergy: 20, costX: true, class: 'monk' },
-        monk_unlock_8: { id: 'monk_unlock_8', name: '逍遥游', icon: '🌬️', type: 'mobility', cost: 3, rarity: 'legend', desc: '获得3层【预知】：必然避开下3次攻击', effect: 'foresight', value: 3, class: 'monk' },
+        monk_unlock_8: { id: 'monk_unlock_8', name: '逍遥游', icon: '🌬️', type: 'special', cost: 3, rarity: 'legend', desc: '【绝学/消耗】获得永久【逍遥】：每打出一张机动牌储存15弹反伤害，受击时全部释放', effect: 'xiaoyao_state', exhaust: true, class: 'monk' },
 
         // ===== 萨满基础 =====
         shaman_basic_1: { id: 'shaman_basic_1', name: '化血掌', icon: '👋', type: 'attack', cost: 1, rarity: 'basic', desc: '12伤害；回复5点生命', effect: 'damage_heal', value: 12, heal: 5, class: 'shaman' },
@@ -1287,6 +1287,7 @@
         G.wave = 1; G.chapter = 1; G.turn = 1;
 
         // 重置战斗状态
+        G.xiaoyaoActive = false; G.xiaoyaoDmg = 0;
         resetBattleState();
 
         // 设置战斗背景（根据章节）
@@ -1325,6 +1326,9 @@
         G.evadeDrawPending = null; G.evadeGrantStealth = false;
         G.lifestealThisTurn = 0;
         G.freeAttackOnDodge = false; G.freeNextAttack = false;
+        G.fumoBlock = 0; G.fumoCounter = 0;
+        // 逍遥状态跨战斗保留（本场战斗永久），新一局时在confirmClass中清除
+        G.nextTurnDrawBonus = 0;
     }
 
     // ==================== 战斗系统 ====================
@@ -1442,6 +1446,8 @@
         if (G.block > 0) buffs.push(`<span class="buff-tag buff">格挡${G.block}</span>`);
         if (G.shield > 0) buffs.push(`<span class="buff-tag buff">护盾${G.shield}</span>`);
         if (G.thorns > 0) buffs.push(`<span class="buff-tag special">荆棘${G.thorns}</span>`);
+        if (G.fumoCounter > 0) buffs.push(`<span class="buff-tag special">伏魔</span>`);
+        if (G.xiaoyaoActive) buffs.push(`<span class="buff-tag special">逍遥${G.xiaoyaoDmg || 0}</span>`);
         if (G.counterReflect > 0) buffs.push(`<span class="buff-tag special">反震</span>`);
         if (G.absorbRedirect) buffs.push(`<span class="buff-tag special">无相转</span>`);
         if (G.lifestealThisTurn > 0) buffs.push(`<span class="buff-tag special">饮血50%</span>`);
@@ -1793,6 +1799,12 @@
 
         executeCard(card);
 
+        // 【逍遥】状态：每打出一张机动牌，储存15弹反伤害
+        if (G.xiaoyaoActive && card.type === 'mobility') {
+            G.xiaoyaoDmg = (G.xiaoyaoDmg || 0) + 15;
+            showFB(`逍遥蓄能！弹反储存：${G.xiaoyaoDmg}`, 'special');
+        }
+
         // 消耗词缀：不进入弃牌堆，从本局移除
         if (card.exhaust) {
             showFB(`「${card.name}」消耗！本局不再出现`, 'info');
@@ -2110,12 +2122,21 @@
                 showFB(`格挡+${card.blockValue || 10}！下回合攻击+${card.atkBonus || 5}`, 'info');
                 break;
 
-            // 伏魔拳：若敌方意图攻击则破招
+            // 伏魔拳：14伤害 + 获得【伏魔】状态
+            case 'fumo_strike':
+                if (enemy) {
+                    dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                }
+                G.fumoBlock = (card.fumoBlock || 5);
+                G.fumoCounter = (card.fumoCounter || 15);
+                showFB('伏魔拳！获得【伏魔】状态：受击抵消5+反击15', 'info');
+                break;
+
+            // 伏魔拳旧版（兼容）
             case 'damage_counter_strike':
                 if (enemy) {
                     let dmg = Math.floor(card.value * nextAtkMult);
                     dealDamage(enemy, dmg);
-                    // 检测敌方意图是否为攻击
                     if (enemy.intent && (enemy.intent === 'attack' || enemy.intent === 'heavy')) {
                         dealDamage(enemy, card.bonusDmg || 15);
                         enemy.weakened = (enemy.weakened || 0) + 2;
@@ -2227,7 +2248,14 @@
                 }
                 break;
 
-            // 逍遥游：3层预知
+            // 逍遥游：获得永久【逍遥】状态
+            case 'xiaoyao_state':
+                G.xiaoyaoActive = true;
+                G.xiaoyaoDmg = G.xiaoyaoDmg || 0;
+                showFB('逍遥游！获得【逍遥】：机动牌蓄能，受击释放弹反！', 'special');
+                break;
+
+            // 逍遥游旧版（兼容）
             case 'foresight':
                 G.absoluteEvade = (G.absoluteEvade || 0) + (card.value || 3);
                 showFB(`预知！必然避开下${card.value || 3}次攻击`, 'special');
@@ -2693,6 +2721,26 @@
             if (G.autoCounter > 0) {
                 e.hp -= G.autoCounter;
                 showFB(`幻影反击${e.name}！-${G.autoCounter}`, 'special');
+            }
+
+            // 【伏魔】状态：抵消伤害+反击
+            if (G.fumoBlock > 0 || G.fumoCounter > 0) {
+                const fumoAbsorb = Math.min(G.fumoBlock || 0, dmg);
+                dmg -= fumoAbsorb;
+                if (G.fumoCounter > 0) {
+                    e.hp -= G.fumoCounter;
+                    showFB(`伏魔反击！抵消${fumoAbsorb}伤害，反击${G.fumoCounter}！`, 'special');
+                }
+                G.fumoBlock = 0;
+                G.fumoCounter = 0;
+                if (dmg <= 0) return;
+            }
+
+            // 【逍遥】弹反：受击时释放所有储存伤害
+            if (G.xiaoyaoActive && G.xiaoyaoDmg > 0) {
+                e.hp -= G.xiaoyaoDmg;
+                showFB(`逍遥弹反！释放${G.xiaoyaoDmg}点伤害！`, 'special');
+                G.xiaoyaoDmg = 0;
             }
 
             G.hurtThisTurn = true;
