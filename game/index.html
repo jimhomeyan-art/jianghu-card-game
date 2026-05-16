@@ -988,7 +988,7 @@
         // ===== 武僧解锁 =====
         monk_unlock_1: { id: 'monk_unlock_1', name: '震天掌', icon: '💥', type: 'attack', cost: 2, rarity: 'rare', desc: '18伤害；若你当前拥有【闪避】状态，伤害翻倍+回1能量', effect: 'damage_if_dodged', value: 18, class: 'monk' },
         monk_unlock_2: { id: 'monk_unlock_2', name: '金钟罩', icon: '🔔', type: 'defense', cost: 2, rarity: 'rare', desc: '获得15护甲；本回合每出一张牌额外+3护甲', effect: 'bell_armor', baseArmor: 15, perCard: 3, class: 'monk' },
-        monk_unlock_3: { id: 'monk_unlock_3', name: '凌波微步', icon: '🌊', type: 'mobility', cost: 1, rarity: 'rare', desc: '获得1次绝对闪避；若闪避成功，此牌回手且本回合变0费', effect: 'lingbo_evade', class: 'monk' },
+        monk_unlock_3: { id: 'monk_unlock_3', name: '凌波微步', icon: '🌊', type: 'mobility', cost: 1, rarity: 'rare', desc: '本回合闪避+60%；闪避成功此牌回手且变0费，失败正常弃置', effect: 'lingbo_evade', evadeBonus: 0.6, class: 'monk' },
         monk_unlock_4: { id: 'monk_unlock_4', name: '雾身', icon: '🌫️', type: 'special', cost: 0, rarity: 'rare', desc: '丢弃所有手牌，下回合能量恢复+2', effect: 'discard_all_energy', energyBonus: 2, class: 'monk' },
         monk_unlock_5: { id: 'monk_unlock_5', name: '不动明王', icon: '🧘', type: 'special', cost: 3, rarity: 'epic', desc: '【消耗】获得永久【不动】：护甲回合结束不再清零', effect: 'budong_state', exhaust: true, class: 'monk' },
         monk_unlock_6: { id: 'monk_unlock_6', name: '太极推手', icon: '☯️', type: 'mobility', cost: 1, rarity: 'rare', desc: '抽2张牌；若含机动/防御牌，使其本回合费用变0', effect: 'taiji_draw', class: 'monk' },
@@ -2322,12 +2322,12 @@
                 showFB(`金钟罩！+${card.baseArmor || 15}护甲，每出牌+3`, 'info');
                 break;
 
-            // 凌波微步(新)：1次绝对闪避，闪避成功回手+变0费
+            // 凌波微步(新)：闪避+60%，闪避成功回手+变0费
             case 'lingbo_evade':
-                G.absoluteEvade = (G.absoluteEvade || 0) + 1;
-                G.lingboCardId = card.id;
+                G.evadeBuff = (G.evadeBuff || 0) + (card.evadeBonus || 0.6);
+                G.evadeBuffTurns = Math.max(G.evadeBuffTurns || 0, 1);
                 G.lingboPending = true;
-                showFB('凌波微步！闪避成功此牌回手变0费', 'info');
+                showFB('凌波微步！闪避+60%，成功则回手变0费', 'info');
                 break;
 
             // 太极推手：抽2张，机动/防御牌本回合变0费
