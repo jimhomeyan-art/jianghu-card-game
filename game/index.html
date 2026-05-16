@@ -2516,6 +2516,7 @@
         if (G.player.hp <= 0) {
             G.player.hp = 0;
             endRun(false);
+            return;
         }
 
         renderAll();
@@ -2752,8 +2753,16 @@
 
             G.hurtThisTurn = true;
             G.player.hp -= dmg;
+            if (G.player.hp <= 0) G.player.hp = 0;
             showFB(`${e.name}攻击！-${dmg}血`, 'fail');
         });
+
+        // 敌人攻击后立即检查死亡
+        if (G.player.hp <= 0) {
+            renderAll();
+            endRun(false);
+            return;
+        }
 
         // 潜行消耗
         if (G.stealth > 0) G.stealth--;
