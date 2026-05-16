@@ -1008,7 +1008,7 @@
         shaman_unlock_3: { id: 'shaman_unlock_3', name: '骨刺', icon: '🌹', type: 'defense', cost: 2, rarity: 'rare', desc: '20护盾；敌人攻击护盾受20点反伤', effect: 'thorns_shield', shield: 20, thorns: 20, class: 'shaman' },
         shaman_unlock_4: { id: 'shaman_unlock_4', name: '煞斩', icon: '⚔️', type: 'attack', cost: 2, rarity: 'rare', desc: '25伤害；每损失10%血量额外+8伤害（30%血线以下翻倍）', effect: 'damage_lowhp_scale', value: 25, perTenPct: 8, class: 'shaman' },
         shaman_unlock_5: { id: 'shaman_unlock_5', name: '血噬', icon: '🩸', type: 'attack', cost: 2, rarity: 'epic', desc: '全场40伤害；并施加【重伤】', effect: 'sacrifice_aoe_wound', value: 40, hpCostPct: 0.20, class: 'shaman' },
-        shaman_unlock_6: { id: 'shaman_unlock_6', name: '爆甲', icon: '🛡️', type: 'defense', cost: 3, rarity: 'epic', desc: '获得50护盾；盾碎时对全场造成等量伤害', effect: 'shield_explode', shield: 50, class: 'shaman' },
+        shaman_unlock_6: { id: 'shaman_unlock_6', name: '爆甲', icon: '🛡️', type: 'attack', cost: 0, rarity: 'epic', desc: '【消耗】消耗当前所有护盾，对全场造成等量伤害', effect: 'shield_explode', exhaust: true, class: 'shaman' },
         shaman_unlock_7: { id: 'shaman_unlock_7', name: '嗜血咒', icon: '🧛', type: 'special', cost: 4, rarity: 'legend', desc: '5回合内，所有伤害的50%转化为治疗', effect: 'blood_demon_lifesteal', turns: 5, lifesteal: 0.5, class: 'shaman' },
         shaman_unlock_8: { id: 'shaman_unlock_8', name: '不死蛊', icon: '🌟', type: 'defense', cost: 5, rarity: 'legend', desc: '3回合内生命不会降至1；每回合回复10%', effect: 'immortal_regen', turns: 3, regenPct: 0.1, class: 'shaman' },
     };
@@ -2386,11 +2386,21 @@
                 showFB('血祭·噬！全场重伤！', 'special');
                 break;
 
-            // 守护反击：盾碎全场伤害
+            // 爆甲：消耗所有护盾，全场造成等量伤害
             case 'shield_explode':
-                G.shield += (card.shield || 50);
-                G.shieldExplode = true;
-                showFB(`守护反击！${card.shield || 50}护盾，碎则爆！`, 'special');
+                {
+                    const shieldVal = G.shield || 0;
+                    if (shieldVal > 0) {
+                        G.shield = 0;
+                        G.enemies.filter(en => en.hp > 0).forEach(en => {
+                            en.hp -= shieldVal;
+                            showDmgPop(shieldVal, 'special');
+                        });
+                        showFB(`爆甲！消耗${shieldVal}护盾，全场${shieldVal}伤害！`, 'special');
+                    } else {
+                        showFB('没有护盾！爆甲无效！', 'fail');
+                    }
+                }
                 break;
 
             // 血魔大法：吸血5回合
