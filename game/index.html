@@ -1545,6 +1545,8 @@
             if (card.effect === 'dawei_dragon') {
                 displayCost = Math.max(0, card.cost - (G.mobilityDefPlayedThisTurn || 0));
             }
+            // 太极推手标记的0费牌
+            if (card._taijiFreed) displayCost = 0;
 
             // 扇形位置计算
             const angle = n === 1 ? 0 : startAngle + maxAngle * i;
