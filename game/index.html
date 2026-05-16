@@ -2209,16 +2209,17 @@
                 showFB(`幻影迷踪！受击反击${card.value}伤害，持续${card.turns}回合`, 'special');
                 break;
 
-            // 天地同寿：消耗能量爆发
+            // 天地同寿：消耗所有能量爆发（包括已扣的费用）
             case 'energy_burst':
                 {
-                    const burstDmg = G.energy * (card.perEnergy || 20);
+                    const totalEnergy = G.energy + card.cost; // 加回已扣费用计算总消耗
+                    const burstDmg = totalEnergy * (card.perEnergy || 20);
                     G.energy = 0;
                     G.enemies.filter(e => e.hp > 0).forEach(e => {
                         e.hp -= burstDmg;
                         showDmgPop(burstDmg, 'special');
                     });
-                    showFB(`天地同寿！全场${burstDmg}伤害！`, 'special');
+                    showFB(`天地同寿！消耗${totalEnergy}气，全场${burstDmg}伤害！`, 'special');
                 }
                 break;
 
@@ -2504,8 +2505,6 @@
         G.comboCount = 0;
         G.evadeGrantStealth = false;
         G.lifestealThisTurn = 0;
-        G.freeAttackOnDodge = false;
-        G.freeNextAttack = false;
         G.evadeDrawPending = false;
 
         // 闪避回合递减
@@ -2699,6 +2698,9 @@
 
         // 潜行消耗
         if (G.stealth > 0) G.stealth--;
+
+        // 敌人攻击结束后清除闪避相关临时状态
+        G.freeAttackOnDodge = false;
 
         // 弃牌（保留有retain词缀的牌）
         const retainCards = G.hand.filter(c => c.retain);
