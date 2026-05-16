@@ -982,7 +982,7 @@
         monk_basic_1: { id: 'monk_basic_1', name: '铁山靠', icon: '🛡️', type: 'defense', cost: 1, rarity: 'basic', desc: '10格挡；下回合攻击+5', effect: 'block_atk', blockValue: 10, atkBonus: 5, class: 'monk' },
         monk_basic_2: { id: 'monk_basic_2', name: '伏魔拳', icon: '👊', type: 'attack', cost: 2, rarity: 'basic', desc: '14伤害；获得【伏魔】：下次受击时抵消5伤害并反击15', effect: 'fumo_strike', value: 14, fumoBlock: 5, fumoCounter: 15, class: 'monk' },
         monk_basic_3: { id: 'monk_basic_3', name: '铁山靠·极', icon: '💪', type: 'attack', cost: 2, rarity: 'basic', desc: '消耗所有护甲，造成护甲值1.5倍的伤害', effect: 'armor_crush', mult: 1.5, class: 'monk' },
-        monk_basic_4: { id: 'monk_basic_4', name: '醉拳闪', icon: '🍶', type: 'mobility', cost: 1, rarity: 'basic', desc: '获得1次闪避；若成功闪避，下张攻击牌费用为0', effect: 'evade_free_attack', class: 'monk' },
+        monk_basic_4: { id: 'monk_basic_4', name: '醉拳闪', icon: '🍶', type: 'mobility', cost: 1, rarity: 'basic', desc: '本回合闪避+60%；闪避成功下回合手牌+1，失败能量+1', effect: 'monk_drunk_evade', evadeBonus: 0.6, class: 'monk' },
         monk_basic_5: { id: 'monk_basic_5', name: '无相转', icon: '�', type: 'defense', cost: 2, rarity: 'basic', desc: '抵消下次伤害并转移给敌人【保留】', effect: 'absorb_redirect', retain: true, class: 'monk' },
 
         // ===== 武僧解锁 =====
@@ -2167,7 +2167,15 @@
                 }
                 break;
 
-            // 醉拳闪：闪避+下张攻击免费
+            // 醉拳闪：闪避+60%，成功手牌+1，失败能量+1
+            case 'monk_drunk_evade':
+                G.evadeBuff = (G.evadeBuff || 0) + (card.evadeBonus || 0.6);
+                G.evadeBuffTurns = Math.max(G.evadeBuffTurns || 0, 1);
+                G.monkDrunkEvade = true;
+                showFB('醉拳闪！闪避+60%，成功手牌+1/失败能量+1', 'info');
+                break;
+
+            // 醉拳闪旧版（兼容）
             case 'evade_free_attack':
                 G.absoluteEvade = (G.absoluteEvade || 0) + 1;
                 G.freeAttackOnDodge = true;
@@ -2546,6 +2554,7 @@
         G.evadeGrantStealth = false;
         G.lifestealThisTurn = 0;
         G.evadeDrawPending = false;
+        G.monkDrunkEvade = false;
 
         // 闪避回合递减
         if (G.evadeBuffTurns > 0) {
@@ -2639,13 +2648,24 @@
                     G.nextTurnDrawBonus = (G.nextTurnDrawBonus || 0) + 1;
                     showFB('闪避成功！下回合手牌+1', 'info');
                 }
-                // 醉拳闪：闪避成功下张攻击免费
+                // 醉拳闪(新)：闪避成功下回合手牌+1
+                if (G.monkDrunkEvade) {
+                    G.nextTurnDrawBonus = (G.nextTurnDrawBonus || 0) + 1;
+                    showFB('醉拳闪！闪避成功，下回合手牌+1', 'special');
+                }
+                // 醉拳闪旧版：闪避成功下张攻击免费
                 if (G.freeAttackOnDodge) {
                     G.freeNextAttack = true;
                     G.freeAttackOnDodge = false;
                     showFB('醉拳闪触发！下张攻击牌免费！', 'special');
                 }
                 return;
+            }
+
+            // 醉拳闪(新)：闪避失败能量+1
+            if (G.monkDrunkEvade) {
+                G.energy = Math.min(G.maxEnergy, G.energy + 1);
+                showFB('醉拳闪！闪避失败，能量+1', 'info');
             }
 
             // 免疫
