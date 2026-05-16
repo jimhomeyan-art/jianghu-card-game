@@ -1414,8 +1414,6 @@
             if (e.wounded) dbTags += `<span class="enemy-debuff-tag">重伤</span>`;
             if (e.weakened > 0) dbTags += `<span class="enemy-debuff-tag">弱${e.weakened}</span>`;
             if (e.armorBreakTurns > 0) dbTags += `<span class="enemy-debuff-tag">破甲${e.armorBreakTurns}</span>`;
-            const intentCls = e.intent === 'attack' ? 'atk-intent' : 'def-intent';
-            const intentTxt = e.intent === 'attack' ? '攻' : '守';
             list.innerHTML += `
               <div class="enemy-card ${dead?'dead':''} ${targeted?'targeted':''}" onclick="selectEnemy(${i})">
                 <div class="enemy-portrait">
@@ -1424,7 +1422,6 @@
                     <div class="enemy-name">${e.name}</div>
                     <div class="enemy-stats-text">${e.atk}攻 ${e.def}防${e.evadeRate > 0 ? ` ${Math.floor(e.evadeRate*100)}%闪` : ''}</div>
                   </div>
-                  <div class="enemy-intent ${intentCls}">${intentTxt}</div>
                   ${dbTags?`<div class="enemy-debuff-tags">${dbTags}</div>`:''}
                 </div>
                 <div class="enemy-hp-bar">
@@ -2762,11 +2759,6 @@
 
         // ========== 新回合开始 ==========
         G.turn++;
-
-        // 敌人意图刷新（每回合开始随机决定：70%攻击/30%防御）
-        G.enemies.filter(e => e.hp > 0).forEach(e => {
-            e.intent = Math.random() < 0.7 ? 'attack' : 'defend';
-        });
 
         // 能量惩罚（金刚不坏后遗症）
         if (G.energyPenaltyNextTurn) {
