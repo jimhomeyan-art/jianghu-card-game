@@ -949,7 +949,7 @@
         sword_basic_5: { id: 'sword_basic_5', name: '蓄力', icon: '🔥', type: 'special', cost: 1, rarity: 'basic', desc: '下一次攻击伤害+100%【保留】', effect: 'buff_next_attack', value: 1.0, retain: true, class: 'sword' },
 
         // ===== 剑侠解锁 =====
-        sword_unlock_1: { id: 'sword_unlock_1', name: '连环剑', icon: '🌀', type: 'attack', cost: 1, rarity: 'rare', desc: '8伤害；[连招]：回1点能量', effect: 'sword_lianhuan', value: 8, class: 'sword' },
+        sword_unlock_1: { id: 'sword_unlock_1', name: '连环剑', icon: '🌀', type: 'attack', cost: 0, rarity: 'rare', desc: '8伤害；复制一张连环剑进入弃牌堆', effect: 'sword_lianhuan', value: 8, class: 'sword' },
         sword_unlock_2: { id: 'sword_unlock_2', name: '剑意', icon: '✨', type: 'special', cost: 1, rarity: 'rare', desc: '每次攻击伤害+3（本场战斗叠加）', effect: 'buff_stack_atk', value: 3, class: 'sword' },
         sword_unlock_3: { id: 'sword_unlock_3', name: '暴击姿态', icon: '🎯', type: 'special', cost: 1, rarity: 'rare', desc: '本回合暴击率+60%', effect: 'buff_crit', value: 0.6, class: 'sword' },
         sword_unlock_4: { id: 'sword_unlock_4', name: '剑芒', icon: '⚡', type: 'special', cost: 2, rarity: 'rare', desc: '伤害+40%，暴伤+50%', effect: 'buff_crit_damage', value: 0.4, critBonus: 0.5, class: 'sword' },
@@ -1865,13 +1865,11 @@
                 showFB('上挑！抽1牌+1能量', 'success');
                 break;
 
-            // 连环剑：8伤害；[连招]：本回合非首张牌则回1点能量
+            // 连环剑：8伤害+复制一张连环剑到弃牌堆
             case 'sword_lianhuan':
                 if (enemy) dealDamage(enemy, Math.floor(card.value * nextAtkMult));
-                if (G.comboCount > 1) {
-                    G.energy = Math.min(G.maxEnergy, G.energy + 1);
-                    showFB(`[连招×${G.comboCount}] 回1点能量！`, 'success');
-                }
+                G.discard.push('sword_unlock_1');
+                showFB('连环剑！复制一张进入弃牌堆', 'success');
                 break;
 
             // 连斩：随机多段攻击
