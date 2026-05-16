@@ -954,12 +954,12 @@
 
         // ===== 刺客基础 =====
         assassin_basic_1: { id: 'assassin_basic_1', name: '暗刺', icon: '🗡️', type: 'attack', cost: 1, rarity: 'basic', desc: '12伤害；[潜行]下伤害×3', effect: 'assassin_anchi', value: 12, stealthMult: 3, class: 'assassin' },
-        assassin_basic_2: { id: 'assassin_basic_2', name: '潜行', icon: '🌑', type: 'special', cost: 0, rarity: 'basic', desc: '获得一层【潜行】，本回合不能被选中【固有】', effect: 'stealth', value: 1, innate: true, class: 'assassin' },
+        assassin_basic_2: { id: 'assassin_basic_2', name: '潜行', icon: '🌑', type: 'special', cost: 1, rarity: 'basic', desc: '获得一层【潜行】，本回合不能被选中【固有】', effect: 'stealth', value: 1, innate: true, class: 'assassin' },
         assassin_basic_3: { id: 'assassin_basic_3', name: '毒刃', icon: '🩸', type: 'attack', cost: 1, rarity: 'basic', desc: '8伤害 + 中毒3层', effect: 'damage_poison', value: 8, poisonStacks: 3, class: 'assassin' },
-        assassin_basic_4: { id: 'assassin_basic_4', name: '瞬闪', icon: '💨', type: 'mobility', cost: 1, rarity: 'basic', desc: '获得2次绝对闪避；闪避成功获得1层潜行', effect: 'absolute_evade', value: 2, grantStealth: true, class: 'assassin' },
+        assassin_basic_4: { id: 'assassin_basic_4', name: '瞬闪', icon: '💨', type: 'mobility', cost: 1, rarity: 'basic', desc: '本回合闪避率+60%；若闪避成功，下回合手牌+1', effect: 'evade_buff_draw', evadeBonus: 0.6, class: 'assassin' },
         assassin_basic_5: { id: 'assassin_basic_5', name: '淬毒', icon: '☠️', type: 'special', cost: 1, rarity: 'basic', desc: '使敌人的【中毒】层数翻倍', effect: 'poison_double', class: 'assassin' },
         assassin_basic_3: { id: 'assassin_basic_3', name: '毒刃', icon: '🩸', type: 'attack', cost: 1, rarity: 'basic', desc: '8伤害 + 中毒3层', effect: 'damage_poison', value: 8, poisonStacks: 3, class: 'assassin' },
-        assassin_basic_4: { id: 'assassin_basic_4', name: '瞬闪', icon: '�', type: 'mobility', cost: 1, rarity: 'basic', desc: '获得2次绝对闪避', effect: 'absolute_evade', value: 2, class: 'assassin' },
+        assassin_basic_4: { id: 'assassin_basic_4', name: '瞬闪', icon: '💨', type: 'mobility', cost: 1, rarity: 'basic', desc: '本回合闪避率+60%；若闪避成功，下回合手牌+1', effect: 'evade_buff_draw', evadeBonus: 0.6, class: 'assassin' },
         assassin_basic_5: { id: 'assassin_basic_5', name: '淬毒', icon: '☠️', type: 'special', cost: 1, rarity: 'basic', desc: '使敌人的【中毒】层数翻倍', effect: 'poison_double', class: 'assassin' },
 
         // ===== 刺客解锁 =====
@@ -1991,6 +1991,14 @@
                 showFB(`获得${card.value || 2}次绝对闪避！`, 'info');
                 break;
 
+            // 瞬闪(新)：本回合闪避率+60%，闪避成功下回合手牌+1
+            case 'evade_buff_draw':
+                G.evadeBuff = (G.evadeBuff || 0) + (card.evadeBonus || 0.6);
+                G.evadeBuffTurns = Math.max(G.evadeBuffTurns || 0, 1);
+                G.evadeDrawPending = true;
+                showFB(`闪避率+${Math.floor((card.evadeBonus || 0.6) * 100)}%！闪避成功下回合多抽1张`, 'info');
+                break;
+
             // 淬毒：中毒层数翻倍
             case 'poison_double':
                 if (enemy && enemy.poison > 0) {
@@ -2498,6 +2506,7 @@
         G.lifestealThisTurn = 0;
         G.freeAttackOnDodge = false;
         G.freeNextAttack = false;
+        G.evadeDrawPending = false;
 
         // 闪避回合递减
         if (G.evadeBuffTurns > 0) {
@@ -2567,6 +2576,11 @@
                     G.stealth = (G.stealth || 0) + 1;
                     showFB('闪避成功！获得1层潜行', 'info');
                 }
+                // 闪避成功：下回合多抽1张
+                if (G.evadeDrawPending) {
+                    G.nextTurnDrawBonus = (G.nextTurnDrawBonus || 0) + 1;
+                    showFB('闪避成功！下回合手牌+1', 'info');
+                }
                 // 醉拳闪：闪避成功下张攻击免费
                 if (G.freeAttackOnDodge) {
                     G.freeNextAttack = true;
@@ -2581,6 +2595,11 @@
             if (Math.random() < totalEvade) {
                 showFB(`闪避${e.name}攻击！`, 'success');
                 G.dodgedThisTurn = true;
+                // 闪避成功：下回合多抽1张
+                if (G.evadeDrawPending) {
+                    G.nextTurnDrawBonus = (G.nextTurnDrawBonus || 0) + 1;
+                    showFB('闪避成功！下回合手牌+1', 'info');
+                }
                 // 醉拳闪：闪避成功下张攻击免费
                 if (G.freeAttackOnDodge) {
                     G.freeNextAttack = true;
@@ -2727,8 +2746,11 @@
 
         G.targetEnemy = null;
 
-        // 抽牌（每回合固定抽5张）
-        drawCards(5);
+        // 抽牌（每回合固定抽5张 + 额外抽牌奖励）
+        const bonusDraw = G.nextTurnDrawBonus || 0;
+        G.nextTurnDrawBonus = 0;
+        drawCards(5 + bonusDraw);
+        if (bonusDraw > 0) showFB(`闪避奖励！额外抽${bonusDraw}张`, 'info');
 
         // 死亡检查
         if (G.player.hp <= 0) { G.player.hp = 0; endRun(false); }
