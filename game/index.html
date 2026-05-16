@@ -1464,7 +1464,7 @@
         if (G.xiaoyaoActive) buffs.push(`<span class="buff-tag special">逍遥${G.xiaoyaoDmg || 0}</span>`);
         if (G.counterReflect > 0) buffs.push(`<span class="buff-tag special">反震</span>`);
         if (G.absorbRedirect) buffs.push(`<span class="buff-tag special">无相转</span>`);
-        if (G.lifestealThisTurn > 0) buffs.push(`<span class="buff-tag special">饮血50%</span>`);
+        if (G.lifestealThisTurn > 0) buffs.push(`<span class="buff-tag special">饮血${Math.floor(G.lifestealThisTurn*100)}%</span>`);
         if (G.freeNextAttack) buffs.push(`<span class="buff-tag buff">攻击免费</span>`);
         if (G.freeAttackOnDodge) buffs.push(`<span class="buff-tag buff">闪避免费</span>`);
         if (G.autoCounter > 0) buffs.push(`<span class="buff-tag special">反击${G.autoCounter}</span>`);
@@ -2319,10 +2319,10 @@
                 showFB(`护盾+${card.value || 30}！`, 'info');
                 break;
 
-            // 饮血阵：本回合伤害50%转治疗
+            // 饮血阵：本回合伤害50%转治疗（可叠加）
             case 'lifesteal_this_turn':
-                G.lifestealThisTurn = (card.lifesteal || 0.5);
-                showFB('饮血阵！本回合伤害50%转治疗', 'special');
+                G.lifestealThisTurn = (G.lifestealThisTurn || 0) + (card.lifesteal || 0.5);
+                showFB(`饮血阵！本回合吸血${Math.floor(G.lifestealThisTurn * 100)}%`, 'special');
                 break;
 
             // 血祭：消耗生命换能量+抽牌（萨满核心发动机）
