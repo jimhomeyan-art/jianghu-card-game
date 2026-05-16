@@ -986,7 +986,7 @@
         monk_unlock_4: { id: 'monk_unlock_4', name: '雾身', icon: '🌫️', type: 'special', cost: 0, rarity: 'rare', desc: '丢弃所有手牌，下回合能量恢复+2', effect: 'discard_all_energy', energyBonus: 2, class: 'monk' },
         monk_unlock_5: { id: 'monk_unlock_5', name: '金刚不坏', icon: '�', type: 'defense', cost: 3, rarity: 'epic', desc: '本回合无敌；下回合能量归零', effect: 'invincible_penalty', class: 'monk' },
         monk_unlock_6: { id: 'monk_unlock_6', name: '幻影迷踪', icon: '👻', type: 'defense', cost: 3, rarity: 'epic', desc: '受到攻击时自动反击15伤害，持续2回合', effect: 'auto_counter', value: 15, turns: 2, class: 'monk' },
-        monk_unlock_7: { id: 'monk_unlock_7', name: '天地同寿', icon: '🌋', type: 'attack', cost: 4, rarity: 'legend', desc: '消耗所有能量，每点能量造成20点反弹伤害', effect: 'energy_burst', perEnergy: 20, class: 'monk' },
+        monk_unlock_7: { id: 'monk_unlock_7', name: '天地同寿', icon: '🌋', type: 'attack', cost: 0, rarity: 'legend', desc: '消耗所有能量(X)，造成X×20点全体伤害', effect: 'energy_burst', perEnergy: 20, costX: true, class: 'monk' },
         monk_unlock_8: { id: 'monk_unlock_8', name: '逍遥游', icon: '🌬️', type: 'mobility', cost: 3, rarity: 'legend', desc: '获得3层【预知】：必然避开下3次攻击', effect: 'foresight', value: 3, class: 'monk' },
 
         // ===== 萨满基础 =====
@@ -1511,7 +1511,7 @@
             if (card.retain) kwTags += '<span class="kw-tag retain">保留</span>';
             if (card.innate) kwTags += '<span class="kw-tag innate">固有</span>';
             const isFree = (G.freeEpicLegend && (card.rarity === 'epic' || card.rarity === 'legend')) || (G.freeNextAttack && card.type === 'attack');
-            const displayCost = isFree ? 0 : card.cost;
+            const displayCost = card.costX ? 'X' : (isFree ? 0 : card.cost);
 
             // 扇形位置计算
             const angle = n === 1 ? 0 : startAngle + maxAngle * i;
@@ -2209,17 +2209,21 @@
                 showFB(`幻影迷踪！受击反击${card.value}伤害，持续${card.turns}回合`, 'special');
                 break;
 
-            // 天地同寿：消耗所有能量爆发（包括已扣的费用）
+            // 天地同寿：X费，消耗所有能量，造成X×20全体伤害
             case 'energy_burst':
                 {
-                    const totalEnergy = G.energy + card.cost; // 加回已扣费用计算总消耗
+                    const totalEnergy = G.energy;
                     const burstDmg = totalEnergy * (card.perEnergy || 20);
                     G.energy = 0;
-                    G.enemies.filter(e => e.hp > 0).forEach(e => {
-                        e.hp -= burstDmg;
-                        showDmgPop(burstDmg, 'special');
-                    });
-                    showFB(`天地同寿！消耗${totalEnergy}气，全场${burstDmg}伤害！`, 'special');
+                    if (burstDmg > 0) {
+                        G.enemies.filter(e => e.hp > 0).forEach(e => {
+                            e.hp -= burstDmg;
+                            showDmgPop(burstDmg, 'special');
+                        });
+                        showFB(`天地同寿！消耗${totalEnergy}气，全场${burstDmg}伤害！`, 'special');
+                    } else {
+                        showFB('没有能量！天地同寿无效！', 'fail');
+                    }
                 }
                 break;
 
@@ -3040,7 +3044,7 @@
         if (!card) return;
 
         const isFree = (G.freeEpicLegend && (card.rarity === 'epic' || card.rarity === 'legend')) || (G.freeNextAttack && card.type === 'attack');
-        const displayCost = isFree ? 0 : card.cost;
+        const displayCost = card.costX ? 'X' : (isFree ? 0 : card.cost);
         const rarityLabel = card.rarity === 'legend' ? '传说' : card.rarity === 'epic' ? '史诗' : card.rarity === 'rare' ? '稀有' : '基础';
         const rarityDot = card.rarity === 'legend' ? '◆' : card.rarity === 'epic' ? '◇' : card.rarity === 'rare' ? '○' : '';
         const typeLabel = card.type === 'attack' ? '攻击' : card.type === 'defense' ? '防御' : card.type === 'mobility' ? '机动' : '特殊';
