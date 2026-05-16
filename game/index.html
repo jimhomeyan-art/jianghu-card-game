@@ -210,10 +210,11 @@
 
         /* ====== 战斗界面 ====== */
         .battle-top {
-            padding: 10px 14px;
+            padding: 8px 14px;
             background: linear-gradient(180deg, rgba(139,26,26,0.12), var(--paper));
             border-bottom: 1px solid var(--border-rough);
             display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 4px;
         }
         .res-item { display: flex; align-items: center; gap: 4px; font-size: 13px; }
         .res-val { color: var(--gold); font-weight: bold; font-family: var(--font-title); font-size: 16px; }
@@ -682,6 +683,41 @@
         }
         .pile-info-btn:hover { color: var(--gold); border-color: var(--gold); }
 
+        /* ====== 职业牌组预览 ====== */
+        .class-deck-preview {
+            margin-top: 16px; padding: 0 2px;
+        }
+        .deck-section-title {
+            font-family: var(--font-title); font-size: 13px; color: var(--gold);
+            letter-spacing: 2px; margin: 12px 0 8px; padding-bottom: 4px;
+            border-bottom: 1px solid rgba(201,168,76,0.2);
+        }
+        .deck-section-title .deck-section-sub {
+            font-size: 10px; color: var(--ink-faint); letter-spacing: 0; margin-left: 6px;
+        }
+        .deck-preview-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+        }
+        .deck-preview-card {
+            padding: 8px 5px; background: linear-gradient(180deg, rgba(40,32,24,0.9), rgba(28,22,18,0.9));
+            border: 1px solid var(--border-rough); border-top: 2px solid var(--border-rough);
+            border-radius: 3px; text-align: center; position: relative;
+        }
+        .deck-preview-card.attack { border-top-color: rgba(196,30,58,0.5); }
+        .deck-preview-card.defense { border-top-color: rgba(42,90,140,0.5); }
+        .deck-preview-card.special { border-top-color: rgba(107,58,125,0.5); }
+        .deck-preview-card.mobility { border-top-color: rgba(45,74,45,0.5); }
+        .deck-preview-card .dp-icon { font-size: 22px; }
+        .deck-preview-card .dp-name { font-family: var(--font-title); font-size: 11px; color: var(--ink); margin-top: 1px; }
+        .deck-preview-card .dp-cost { position: absolute; top: 2px; right: 4px; font-size: 10px; color: var(--cyan); font-weight: bold; }
+        .deck-preview-card .dp-desc { font-size: 8px; color: var(--ink-dim); margin-top: 2px; line-height: 1.2; }
+        .deck-preview-card .dp-rarity { position: absolute; top: 2px; left: 4px; font-size: 7px; }
+        .deck-preview-card .dp-rarity.rare { color: var(--blue); }
+        .deck-preview-card .dp-rarity.epic { color: #9B6B9B; }
+        .deck-preview-card .dp-rarity.legend { color: var(--gold); }
+        .deck-preview-card.locked { opacity: 0.6; border-style: dashed; }
+        .deck-preview-card .dp-lock { font-size: 8px; color: var(--ink-faint); margin-top: 2px; }
+
         /* ====== 卡牌长按预览浮窗 ====== */
         .card-preview-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -813,6 +849,7 @@
         <div class="class-select">
             <div class="class-title">选择你的职业</div>
             <div class="class-list" id="classList"></div>
+            <div class="class-deck-preview" id="classDeckPreview"></div>
         </div>
         <button class="start-btn" onclick="confirmClass()">确认 · 开始冒险</button>
         <button class="back-btn" onclick="showScreen('screenMain')">← 返回</button>
@@ -822,6 +859,11 @@
     <div class="screen" id="screenBattle">
         <div class="battle-top">
             <div class="res-item"><span>银</span><span class="res-val" id="rGold">0</span></div>
+            <div class="pile-info-bar">
+                <span class="pile-info-btn" onclick="openPileViewer('deck')">牌组<span id="deckCount">0</span></span>
+                <span class="pile-info-btn" onclick="openPileViewer('draw')">抽<span id="drawCount">0</span></span>
+                <span class="pile-info-btn" onclick="openPileViewer('discard')">弃<span id="discardCount">0</span></span>
+            </div>
             <div class="wave-tag">章节 <span id="rChapter">1</span> - 战斗 1</div>
             <div class="res-item"><span>气</span><span class="res-val" id="rEnergy">3</span>/<span id="rMaxEnergy">6</span></div>
             <div class="res-item" id="comboDisplay" style="display:none"><span>连击</span><span class="res-val" id="rCombo">0</span></div>
@@ -841,11 +883,6 @@
         <div class="hand-area">
             <div class="hand-label">
                 <span>手牌 <span id="handCount">0</span>/10</span>
-                <div class="pile-info-bar">
-                    <span class="pile-info-btn" onclick="openPileViewer('deck')">牌组 <span id="deckCount">0</span></span>
-                    <span class="pile-info-btn" onclick="openPileViewer('draw')">抽牌堆 <span id="drawCount">0</span></span>
-                    <span class="pile-info-btn" onclick="openPileViewer('discard')">弃牌堆 <span id="discardCount">0</span></span>
-                </div>
                 <span id="turnInfo">回合 1</span>
             </div>
             <div class="hand-fan" id="handList"></div>
@@ -1169,9 +1206,49 @@
                 document.querySelectorAll('.class-card').forEach(c => c.classList.remove('sel'));
                 card.classList.add('sel');
                 selClass = id;
+                renderClassDeckPreview(id);
             };
             list.appendChild(card);
         });
+        renderClassDeckPreview(selClass);
+    }
+
+    function renderClassDeckPreview(classId) {
+        const cls = CLASSES[classId];
+        if (!cls) return;
+        const container = document.getElementById('classDeckPreview');
+
+        function cardHtml(id, isLocked) {
+            const card = ALL_CARDS[id];
+            if (!card) return '';
+            const rarityDot = card.rarity === 'legend' ? '◆' : card.rarity === 'epic' ? '◇' : card.rarity === 'rare' ? '○' : '';
+            return `
+                <div class="deck-preview-card ${card.type} ${isLocked ? 'locked' : ''}">
+                    ${rarityDot ? `<div class="dp-rarity ${card.rarity}">${rarityDot}</div>` : ''}
+                    <div class="dp-cost">⚡${card.cost}</div>
+                    <div class="dp-icon">${card.icon}</div>
+                    <div class="dp-name">${card.name}</div>
+                    <div class="dp-desc">${card.desc}</div>
+                    ${isLocked ? '<div class="dp-lock">🔒 通关解锁</div>' : ''}
+                </div>
+            `;
+        }
+
+        // 基础牌（去重，只显示唯一卡牌）
+        const basicUnique = [...new Set(cls.basicCards)];
+        // 解锁池
+        const unlockPool = cls.unlockPool || [];
+
+        container.innerHTML = `
+            <div class="deck-section-title">📋 初始牌组 <span class="deck-section-sub">每张×2，共${cls.basicCards.length * 2}张</span></div>
+            <div class="deck-preview-grid">
+                ${basicUnique.map(id => cardHtml(id, false)).join('')}
+            </div>
+            <div class="deck-section-title">🔮 可解锁卡牌 <span class="deck-section-sub">通关章节后选择获得</span></div>
+            <div class="deck-preview-grid">
+                ${unlockPool.map(id => cardHtml(id, true)).join('')}
+            </div>
+        `;
     }
 
     function confirmClass() {
