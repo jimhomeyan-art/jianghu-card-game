@@ -823,8 +823,8 @@
         // ===== 剑侠基础 =====
         sword_basic_1: { id: 'sword_basic_1', name: '上挑', icon: '↗️', type: 'attack', cost: 0, rarity: 'basic', desc: '8伤害；抽1张牌，回1点能量', effect: 'sword_shangtiao', value: 8, class: 'sword' },
         sword_basic_2: { id: 'sword_basic_2', name: '重击', icon: '🔪', type: 'attack', cost: 2, rarity: 'basic', desc: '造成18点伤害', effect: 'damage', value: 18, class: 'sword' },
-        sword_basic_3: { id: 'sword_basic_3', name: '连斩', icon: '💫', type: 'attack', cost: 2, rarity: 'basic', desc: '6伤害×3次', effect: 'damage_multi', value: 6, hits: 3, class: 'sword' },
-        sword_basic_4: { id: 'sword_basic_4', name: '破甲', icon: '⛰️', type: 'attack', cost: 2, rarity: 'basic', desc: '15伤害，忽视25%防御', effect: 'damage_armor_ignore', value: 15, ignorePct: 0.25, class: 'sword' },
+        sword_basic_3: { id: 'sword_basic_3', name: '连斩', icon: '💫', type: 'attack', cost: 2, rarity: 'basic', desc: '6伤害×随机2~5次', effect: 'damage_multi_random', value: 6, minHits: 2, maxHits: 5, class: 'sword' },
+        sword_basic_4: { id: 'sword_basic_4', name: '破甲', icon: '⛰️', type: 'attack', cost: 2, rarity: 'basic', desc: '8伤害，忽视25%防御，破甲持续3回合', effect: 'damage_armor_break', value: 8, ignorePct: 0.25, breakTurns: 3, class: 'sword' },
         sword_basic_5: { id: 'sword_basic_5', name: '蓄力', icon: '🔥', type: 'special', cost: 1, rarity: 'basic', desc: '下一次攻击伤害+100%【保留】', effect: 'buff_next_attack', value: 1.0, retain: true, class: 'sword' },
 
         // ===== 剑侠解锁 =====
@@ -1254,6 +1254,7 @@
             if (e.marked) dbTags += `<span class="enemy-debuff-tag">标记</span>`;
             if (e.wounded) dbTags += `<span class="enemy-debuff-tag">重伤</span>`;
             if (e.weakened > 0) dbTags += `<span class="enemy-debuff-tag">弱${e.weakened}</span>`;
+            if (e.armorBreakTurns > 0) dbTags += `<span class="enemy-debuff-tag">破甲${e.armorBreakTurns}</span>`;
             const intentCls = e.intent === 'attack' ? 'atk-intent' : 'def-intent';
             const intentTxt = e.intent === 'attack' ? '攻' : '守';
             list.innerHTML += `
@@ -1693,7 +1694,18 @@
                 }
                 break;
 
-            // 连斩：多段攻击
+            // 连斩：随机多段攻击
+            case 'damage_multi_random':
+                if (enemy) {
+                    const hits = Math.floor(Math.random() * (card.maxHits - card.minHits + 1)) + card.minHits;
+                    for (let i = 0; i < hits; i++) {
+                        if (enemy.hp > 0) dealDamage(enemy, Math.floor(card.value * nextAtkMult));
+                    }
+                    showFB(`连斩${hits}次！`, 'info');
+                }
+                break;
+
+            // 连斩（兼容旧版）：固定多段攻击
             case 'damage_multi':
                 if (enemy) {
                     for (let i = 0; i < (card.hits || 3); i++) {
@@ -1702,7 +1714,17 @@
                 }
                 break;
 
-            // 破甲：忽视防御
+            // 破甲：伤害+忽视防御+破甲debuff持续3回合
+            case 'damage_armor_break':
+                if (enemy) {
+                    dealDamage(enemy, Math.floor(card.value * nextAtkMult), 0, card.ignorePct || 0.25);
+                    enemy.armorBreak = card.ignorePct || 0.25;
+                    enemy.armorBreakTurns = card.breakTurns || 3;
+                    showFB(`破甲！${enemy.name}防御降低${Math.floor((card.ignorePct || 0.25) * 100)}%，持续${card.breakTurns || 3}回合`, 'special');
+                }
+                break;
+
+            // 破甲（兼容旧版）：忽视防御
             case 'damage_armor_ignore':
                 if (enemy) dealDamage(enemy, Math.floor(card.value * nextAtkMult), 0, card.ignorePct || 0.25);
                 break;
@@ -2206,7 +2228,9 @@
         dmg += (G.stackAtk || 0);
         // 忽视防御（mode=2完全无视）
         if (mode !== 2) {
-            const defReduction = enemy.def * (1 - ignoreDefPct);
+            // 破甲debuff：叠加忽视防御比例
+            const totalIgnore = Math.min(1, ignoreDefPct + (enemy.armorBreak || 0));
+            const defReduction = enemy.def * (1 - totalIgnore);
             dmg = Math.floor(dmg * (1 - defReduction / (defReduction + 30)));
         }
         // 标记增伤（死神标记）
@@ -2340,6 +2364,11 @@
             if (e.wounded && e.woundedTurns > 0) {
                 e.woundedTurns--;
                 if (e.woundedTurns <= 0) e.wounded = false;
+            }
+            // 破甲回合递减
+            if (e.armorBreakTurns > 0) {
+                e.armorBreakTurns--;
+                if (e.armorBreakTurns <= 0) { e.armorBreak = 0; showFB(`${e.name}破甲效果消失`, 'info'); }
             }
         });
 
