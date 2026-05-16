@@ -1206,6 +1206,7 @@
                         <span class="stat-item">❤️${c.hp}</span>
                         <span class="stat-item">⚔️${c.atk}</span>
                         <span class="stat-item">🛡️${c.def}</span>
+                        <span class="stat-item">💨${Math.floor(c.evade * 100)}%</span>
                     </div>
                     <div class="flow-tags">
                         ${c.flows.map(f => `<span class="flow-tag ${f.tag}">${f.name}</span>`).join('')}
